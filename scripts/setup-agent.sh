@@ -47,7 +47,7 @@ as_agent '
   npm config set prefix ~/.local >/dev/null
   grep -q "\.local/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\$HOME/.local/bin:\$PATH" >> ~/.bashrc
   if [ "'"${UPGRADE:-0}"'" = 1 ] || ! command -v paperclipai >/dev/null; then npm install -g --no-fund --no-audit paperclipai@latest; fi
-  if [ "'"${UPGRADE:-0}"'" = 1 ] || ! command -v opencode    >/dev/null; then npm install -g --no-fund --no-audit opencode-ai@latest; fi
+  if [ "'"${UPGRADE:-0}"'" = 1 ] || ! command -v opencode    >/dev/null; then npm install -g --no-fund --no-audit --allow-scripts=opencode-ai opencode-ai@latest; fi
   echo "paperclipai $(paperclipai --version)"
   echo "opencode    $(opencode --version)"
 '
