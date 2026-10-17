@@ -1,0 +1,291 @@
+{
+  "name": "SEO data (agents)",
+  "nodes": [
+    {
+      "id": "n1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "4f559676-42e5-4271-8988-fd2118b3ba7d",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "seo-data",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "SEO data token"
+        }
+      }
+    },
+    {
+      "id": "n2",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// One entry per site. Add client sites here (keywords are what local customers search).\nconst SITES = {\n  'dhobico.com': {\n    base: 'https://dhobico.com',\n    location: 'Hyderabad,Telangana,India',\n    brand: ['dhobi & co', 'dhobi and co', 'dhobico'],\n    keywords: [\n      'ironing service in hyderabad',\n      'steam ironing service hyderabad',\n      'doorstep ironing service hyderabad',\n      'ironing service near me',\n      'laundry pickup and delivery hyderabad'\n    ],\n    maxPages: 20\n  }\n};\nconst site = String(($json.query || {}).site || '').toLowerCase().replace(/^www\\./, '');\nconst cfg = SITES[site];\nif (!cfg) throw new Error('Unknown site \"' + site + '\". Known: ' + Object.keys(SITES).join(', '));\nreturn [{ json: { site, ...cfg } }];"
+      }
+    },
+    {
+      "id": "n3",
+      "name": "Discover",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Deterministic checks done here, without paid APIs: sitemap URLs, homepage schema types, llms.txt, robots.txt.\nconst c = $('Config').first().json;\nconst get = async (url) => {\n  try {\n    const r = await this.helpers.httpRequest({ url, method: 'GET', returnFullResponse: true, ignoreHttpStatusErrors: true, timeout: 20000, headers: { 'User-Agent': 'LivoSEOBot/1.0' } });\n    return { status: r.statusCode, body: typeof r.body === 'string' ? r.body : JSON.stringify(r.body) };\n  } catch (e) { return { status: 0, body: '', error: e.message }; }\n};\nconst locs = (xml) => [...xml.matchAll(/<loc>\\s*([^<\\s]+)\\s*<\\/loc>/g)].map(m => m[1]);\n\n// Sitemap (handles a sitemap index one level deep)\nconst sm = await get(c.base + '/sitemap.xml');\nlet pages = [], sitemaps = [];\nif (sm.status === 200) {\n  if (/<sitemapindex/i.test(sm.body)) {\n    sitemaps = locs(sm.body);\n    for (const s of sitemaps.slice(0, 10)) { const r = await get(s); if (r.status === 200) pages.push(...locs(r.body)); }\n  } else pages = locs(sm.body);\n}\npages = [...new Set(pages)].filter(u => !/\\.(jpg|jpeg|png|webp|gif|svg|pdf)$/i.test(u));\nconst home = c.base + '/';\nconst urls = [home, ...pages.filter(u => u.replace(/\\/$/, '') !== c.base)].slice(0, c.maxPages);\n\n// Homepage structured data (JSON-LD @type values)\nconst hp = await get(home);\nconst types = new Set();\nfor (const m of hp.body.matchAll(/<script[^>]*application\\/ld\\+json[^>]*>([\\s\\S]*?)<\\/script>/gi)) {\n  for (const t of m[1].matchAll(/\"@type\"\\s*:\\s*(\\[[^\\]]*\\]|\"[^\"]+\")/g)) {\n    t[1].replace(/[\\[\\]\"]/g, '').split(',').map(s => s.trim()).filter(Boolean).forEach(x => types.add(x));\n  }\n}\nconst llms = await get(c.base + '/llms.txt');\nconst robots = await get(c.base + '/robots.txt');\n\nreturn [{ json: {\n  urls,\n  checks: {\n    sitemap: { status: sm.status, isIndex: sitemaps.length > 0, childSitemaps: sitemaps.length, pagesListed: pages.length },\n    homepage: { status: hp.status, jsonLdTypes: [...types], hasFaqText: /faq|frequently asked|got questions/i.test(hp.body) },\n    llmsTxt: { status: llms.status, firstLine: llms.status === 200 ? llms.body.split('\\n')[0].slice(0, 120) : null },\n    robotsTxt: { status: robots.status, mentionsSitemap: /sitemap:/i.test(robots.body), disallowAll: /^disallow:\\s*\\/\\s*$/im.test(robots.body) }\n  }\n} }];"
+      }
+    },
+    {
+      "id": "n4",
+      "name": "OnPage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/on_page/instant_pages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.urls.map(u => ({ url: u, enable_javascript: false, validate_micromarkup: true }))) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "name": "DataForSEO"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n5",
+      "name": "PageSpeed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?strategy=mobile&url=' + encodeURIComponent($('Config').first().json.base + '/') }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpQueryAuth": {
+          "name": "GCP API Key"
+        }
+      }
+    },
+    {
+      "id": "n6",
+      "name": "Keywords",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const c = $('Config').first().json;\nreturn c.keywords.map(k => ({ json: { keyword: k, location: c.location } }));"
+      }
+    },
+    {
+      "id": "n7",
+      "name": "SERP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/serp/google/organic/live/advanced",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{ keyword: $json.keyword, location_name: $json.location, language_code: 'en', device: 'mobile', depth: 30 }]) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "name": "DataForSEO"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n8",
+      "name": "Maps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dataforseo.com/v3/serp/google/maps/live/advanced",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{ keyword: $('Keywords').item.json.keyword, location_name: $('Keywords').item.json.location, language_code: 'en', depth: 20 }]) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpBasicAuth": {
+          "name": "DataForSEO"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "n9",
+      "name": "Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Compact summary for the agent: facts only, small enough for a cheap model.\nconst c = $('Config').first().json;\nconst d = $('Discover').first().json;\nconst dfsErr = (r) => (r && r.status_code && r.status_code !== 20000) ? r.status_message : null;\nconst errOf = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 400) : null;\n\n// On-page (DataForSEO instant pages)\nconst op = $('OnPage').first().json || {};\n// DataForSEO reports some checks as true when they are GOOD; everything else true is a problem.\nconst POSITIVE = new Set(['is_https','has_html_doctype','canonical','seo_friendly_url','is_www','has_micromarkup','has_meta_title','has_meta_description']);\nconst isPositive = (k) => POSITIVE.has(k) || k.startsWith('seo_friendly_url');\nconst pages = (op.tasks || []).map(t => {\n  const it = (((t.result || [])[0] || {}).items || [])[0];\n  if (!it) return { url: (t.data || {}).url, error: t.status_message };\n  const m = it.meta || {};\n  const issues = Object.entries(it.checks || {}).filter(([k, v]) => v === true && !isPositive(k)).map(([k]) => k);\n  return {\n    url: it.url, status: it.status_code, onpageScore: it.onpage_score,\n    title: m.title || null, titleLength: m.title_length || (m.title || '').length,\n    description: m.description || null, descriptionLength: m.description_length || (m.description || '').length,\n    h1: ((m.htags || {}).h1 || []).slice(0, 3), canonical: m.canonical || null,\n    internalLinks: m.internal_links_count, wordCount: (m.content || {}).plain_text_word_count,\n    issues\n  };\n});\n\n// PageSpeed (mobile, homepage)\nconst ps = $('PageSpeed').first().json || {};\nconst lh = ps.lighthouseResult || {};\nconst cat = lh.categories || {}, au = lh.audits || {};\nconst pagespeed = lh.categories ? {\n  performance: Math.round((cat.performance || {}).score * 100),\n  lcp: (au['largest-contentful-paint'] || {}).displayValue,\n  cls: (au['cumulative-layout-shift'] || {}).displayValue,\n  tbt: (au['total-blocking-time'] || {}).displayValue\n} : { error: errOf(ps) || 'PageSpeed unavailable' };\n\n// Rankings: organic + maps, one item per keyword (paired with the Keywords node)\nconst kws = $('Keywords').all().map(i => i.json.keyword);\nconst mine = (s) => { s = String(s || '').toLowerCase(); return s.includes(c.site) || c.brand.some(b => s.includes(b)); };\nconst organic = $('SERP').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []).filter(x => x.type === 'organic');\n  const hit = items.find(x => mine(x.domain) || mine(x.url));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, url: hit ? hit.url : null,\n           top3: items.slice(0, 3).map(x => x.domain), error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\nconst maps = $('Maps').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []);\n  const hit = items.find(x => mine(x.domain) || mine(x.title));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, matched: hit ? hit.title : null,\n           top3: items.slice(0, 3).map(x => x.title + (x.rating ? ' (' + x.rating.value + '★/' + x.rating.votes_count + ')' : '')),\n           error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\n\nconst cost = [op, ...$('SERP').all().map(i => i.json), ...$('Maps').all().map(i => i.json)]\n  .reduce((s, x) => s + (Number((x || {}).cost) || 0), 0);\n\nreturn [{ json: {\n  site: c.site, collectedAt: new Date().toISOString(),\n  siteChecks: d.checks, pagesAudited: pages.length, onpageError: errOf(op) || dfsErr(op), pages, pagespeed,\n  rankings: { location: c.location, organic, maps },\n  dataforseoCostUsd: Math.round(cost * 10000) / 10000\n} }];"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Discover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discover": {
+      "main": [
+        [
+          {
+            "node": "OnPage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OnPage": {
+      "main": [
+        [
+          {
+            "node": "PageSpeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PageSpeed": {
+      "main": [
+        [
+          {
+            "node": "Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keywords": {
+      "main": [
+        [
+          {
+            "node": "SERP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SERP": {
+      "main": [
+        [
+          {
+            "node": "Maps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Maps": {
+      "main": [
+        [
+          {
+            "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all"
+  }
+}

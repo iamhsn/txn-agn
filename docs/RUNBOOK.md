@@ -106,3 +106,18 @@ paperclipai doctor
 ```
 
 Never use `pkill -u` or `killall` on the server to stop agent processes; use `paperclipai service stop`.
+
+## SEO data workflow (n8n → agents)
+
+`n8n/seo-data-workflow.json` is the "SEO data (agents)" workflow. It is the agents' only source of SEO facts:
+sitemap/robots/llms.txt/homepage schema checks (free), DataForSEO on-page checks for up to 20 pages, Google
+organic + Maps rankings for each site's keywords, and mobile PageSpeed. About $0.04 of DataForSEO per site per run.
+
+- Called by agents from the server only: `GET http://127.0.0.1:5678/webhook/seo-data?site=<domain>` with header
+  `X-SEO-Token: $SEO_DATA_TOKEN` (the token lives in agent's `paperclip.env` and in the n8n credential "SEO data token").
+  The webhook path is also reachable through the tunnel, so the header check must stay on.
+- n8n credentials it needs: "SEO data token" (Header Auth), "DataForSEO" (Basic Auth, API login + API password),
+  "GCP API Key" (Query Auth, Name = `key`, Value = an `AIza…` key from the livo-ai-511908 project with PageSpeed
+  Insights API enabled).
+- Restore: n8n → Workflows → Import from file, then pick the three credentials on the nodes and activate.
+- Add a site: add an entry to `SITES` in the Config node (base URL, location, brand names, 5 local keywords).
