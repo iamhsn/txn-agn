@@ -59,14 +59,25 @@ as_agent '
   printf "[Service]\nEnvironmentFile=%%h/.config/paperclip.env\n" > ~/.config/systemd/user/paperclipai.service.d/env.conf
 '
 
+CONFIG=/home/$AGENT/.paperclip/instances/default/config.json
+if [[ ! -f $CONFIG ]]; then
+  log "First-time Paperclip setup (writes its config; uses the database and mode from paperclip.env)"
+  as_agent 'systemctl --user stop paperclipai.service 2>/dev/null; systemctl --user reset-failed paperclipai.service 2>/dev/null' || true
+  # --yes runs unattended and then starts the server in the foreground; the timeout ends that
+  # foreground copy once the config is written, and the service takes over below.
+  as_agent 'set -a; . ~/.config/paperclip.env; set +a; timeout 150 paperclipai onboard --yes --bind loopback --no-install-service' || true
+  [[ -f $CONFIG ]] || die "onboarding did not create $CONFIG; send the output above to Claude"
+  echo "Config written: $CONFIG"
+fi
+
 log "Installing and starting the Paperclip service"
 as_agent 'paperclipai service install' || true
-as_agent 'systemctl --user daemon-reload && systemctl --user enable paperclipai.service >/dev/null 2>&1; systemctl --user restart paperclipai.service' || true
+as_agent 'systemctl --user daemon-reload; systemctl --user reset-failed paperclipai.service 2>/dev/null; systemctl --user enable paperclipai.service >/dev/null 2>&1; systemctl --user restart paperclipai.service' || true
 
 log "Waiting for Paperclip to answer on 127.0.0.1:3100 (first start runs database migrations)"
 ok=0
 for _ in $(seq 1 60); do
-  if curl -fsS -m 3 -o /dev/null http://127.0.0.1:3100/api/health; then ok=1; break; fi
+  if curl -fs -m 3 -o /dev/null http://127.0.0.1:3100/api/health 2>/dev/null; then ok=1; break; fi
   sleep 3
 done
 if [[ $ok -ne 1 ]]; then
