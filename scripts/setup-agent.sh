@@ -46,8 +46,16 @@ as_agent '
   cd ~
   npm config set prefix ~/.local >/dev/null
   grep -q "\.local/bin" ~/.bashrc 2>/dev/null || echo "export PATH=\$HOME/.local/bin:\$PATH" >> ~/.bashrc
-  if [ "'"${UPGRADE:-0}"'" = 1 ] || ! command -v paperclipai >/dev/null; then npm install -g --no-fund --no-audit paperclipai@latest; fi
-  if [ "'"${UPGRADE:-0}"'" = 1 ] || ! command -v opencode    >/dev/null; then npm install -g --no-fund --no-audit --allow-scripts=opencode-ai opencode-ai@latest; fi
+  # Paperclip uses its own managed installer (~/.paperclip/cli, recorded in install.json);
+  # its pre-start check refuses an npm-global copy. Remove any npm copy first.
+  if [ -d ~/.local/lib/node_modules/paperclipai ]; then npm uninstall -g paperclipai >/dev/null; fi
+  if [ ! -f ~/.paperclip/cli/install.json ]; then
+    npx -y paperclipai@latest install --yes
+  elif [ "'"${UPGRADE:-0}"'" = 1 ]; then
+    paperclipai update
+  fi
+  [ -f ~/.paperclip/cli/install.json ] || { echo "Paperclip managed install did not complete"; exit 1; }
+  if [ "'"${UPGRADE:-0}"'" = 1 ] || ! command -v opencode >/dev/null; then npm install -g --no-fund --no-audit --allow-scripts=opencode-ai opencode-ai@latest; fi
   echo "paperclipai $(paperclipai --version)"
   echo "opencode    $(opencode --version)"
 '
