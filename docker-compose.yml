@@ -64,7 +64,9 @@ services:
       N8N_PROTOCOL: https
       N8N_PORT: 5678
       WEBHOOK_URL: https://${N8N_HOST}/
-      N8N_EDITOR_BASE_URL: https://${N8N_HOST}/
+      # Set in .env to the Tailscale address (https://txn-agn.<tailnet>.ts.net/) so Google OAuth
+      # redirects land on the private editor. Falls back to the public host if unset.
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL:-https://${N8N_HOST}/}
       N8N_PROXY_HOPS: 1
       GENERIC_TIMEZONE: Asia/Kolkata
       TZ: Asia/Kolkata

@@ -27,8 +27,11 @@ if [[ -n ${R2_ACCESS_KEY_ID:-} && -n ${R2_SECRET_ACCESS_KEY:-} && -n ${R2_ACCOUN
   export RCLONE_CONFIG_R2_TYPE=s3 RCLONE_CONFIG_R2_PROVIDER=Cloudflare \
          RCLONE_CONFIG_R2_ACCESS_KEY_ID=$R2_ACCESS_KEY_ID RCLONE_CONFIG_R2_SECRET_ACCESS_KEY=$R2_SECRET_ACCESS_KEY \
          RCLONE_CONFIG_R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true
-  rclone copy "$file" "r2:${R2_BUCKET}/postgres/" --s3-no-check-bucket
-  rclone copy "$DIR/env-$stamp" "r2:${R2_BUCKET}/env/" --s3-no-check-bucket
+  # R2 sometimes answers the first request with 501; rclone's own retries absorb it.
+  # Bucket checks are already off via RCLONE_CONFIG_R2_NO_CHECK_BUCKET above.
+  R2_FLAGS=(--retries 5 --low-level-retries 10 --retries-sleep 5s)
+  rclone copy "$file" "r2:${R2_BUCKET}/postgres/" "${R2_FLAGS[@]}"
+  rclone copy "$DIR/env-$stamp" "r2:${R2_BUCKET}/env/" "${R2_FLAGS[@]}"
   where="server + R2"
 fi
 

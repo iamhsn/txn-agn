@@ -45,9 +45,17 @@ if ! command -v docker >/dev/null; then
   install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
-  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu ${VERSION_CODENAME} stable" \
-    > /etc/apt/sources.list.d/docker.list
-  apt-get update -qq
+  docker_repo() {
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $1 stable" \
+      > /etc/apt/sources.list.d/docker.list
+    apt-get update -qq || true
+  }
+  docker_repo "${VERSION_CODENAME}"
+  # A brand-new Ubuntu release often has no Docker repo yet; fall back to the latest LTS (noble).
+  if ! apt-cache policy docker-ce | grep -q 'Candidate: [0-9]'; then
+    echo "No Docker packages for ${VERSION_CODENAME} yet; using the Ubuntu 24.04 (noble) repository."
+    docker_repo noble
+  fi
   apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
 fi
 cat > /etc/docker/daemon.json <<'EOF'
