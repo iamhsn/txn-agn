@@ -60,6 +60,10 @@ as_agent '
   echo "opencode    $(opencode --version)"
 '
 
+# The service must find opencode (and other per-user tools) in ~/.local/bin; systemd's default
+# PATH does not include it. EnvironmentFile values override the unit's own PATH.
+grep -q '^PATH=' "$ENVFILE" || echo "PATH=/home/$AGENT/.local/bin:/usr/local/bin:/usr/bin:/bin" >> "$ENVFILE"
+
 log "Pointing the Paperclip service at its settings file"
 as_agent '
   set -e
