@@ -78,6 +78,13 @@ if [[ ! -f $CONFIG ]]; then
   echo "Config written: $CONFIG"
 fi
 
+# Unattended onboarding always writes local_trusted (no login), and config.json wins over
+# PAPERCLIP_DEPLOYMENT_MODE in paperclip.env. Force login-protected mode.
+if [[ $(jq -r '.server.deploymentMode' "$CONFIG") != authenticated ]]; then
+  log "Switching Paperclip to login-protected (authenticated) mode"
+  as_agent "cp '$CONFIG' '$CONFIG.bak' && jq '.server.deploymentMode=\"authenticated\" | .server.exposure=\"private\"' '$CONFIG.bak' > '$CONFIG'"
+fi
+
 log "Installing and starting the Paperclip service"
 as_agent 'paperclipai service install' || true
 as_agent 'systemctl --user daemon-reload; systemctl --user reset-failed paperclipai.service 2>/dev/null; systemctl --user enable paperclipai.service >/dev/null 2>&1; systemctl --user restart paperclipai.service' || true
