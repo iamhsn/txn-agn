@@ -1,0 +1,9 @@
+[Unit]
+Description=txn-agn: health check and heartbeat
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/txn-agn/scripts/health.sh
+Nice=10

@@ -1,0 +1,9 @@
+[Unit]
+Description=txn-agn: weekly disk cleanup
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/txn-agn/scripts/cleanup.sh
+Nice=10

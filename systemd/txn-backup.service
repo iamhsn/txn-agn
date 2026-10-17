@@ -1,0 +1,9 @@
+[Unit]
+Description=txn-agn: nightly database backup
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/txn-agn/scripts/backup.sh
+Nice=10

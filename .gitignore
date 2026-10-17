@@ -1,0 +1,9 @@
+.env
+*.env
+!.env.example
+backups/
+*.sql
+*.sql.gz
+*.tar.gz
+n8n-workflows*.json
+credentials*.json
