@@ -63,6 +63,8 @@ fi
 if ! tailscale status >/dev/null 2>&1; then
   if [[ -n ${TS_AUTHKEY:-} ]]; then
     tailscale up --authkey "$TS_AUTHKEY" --ssh --hostname txn-agn
+  elif [[ ! -t 0 ]]; then
+    echo "No terminal (post-install run): skipping Tailscale login. Run 'tailscale up --ssh --hostname txn-agn' later."
   else
     echo "Open the login link below on your laptop to add this server to your tailnet."
     tailscale up --ssh --hostname txn-agn
@@ -70,10 +72,12 @@ if ! tailscale status >/dev/null 2>&1; then
 fi
 
 log "Repository at $APP_DIR"
-if [[ ! -d $APP_DIR/.git ]]; then
-  git clone "$REPO_URL" "$APP_DIR"
+if [[ -d $APP_DIR/.git ]]; then
+  git -C "$APP_DIR" pull --ff-only || echo "git pull failed (no deploy key yet?); using the files already on disk."
+elif [[ -f $APP_DIR/docker-compose.yml ]]; then
+  echo "Using files unpacked by the post-install script (no git checkout yet)."
 else
-  git -C "$APP_DIR" pull --ff-only
+  git clone "$REPO_URL" "$APP_DIR"
 fi
 chmod +x "$APP_DIR"/scripts/*.sh "$APP_DIR"/scripts/set-secret "$APP_DIR"/config/postgres-init/*.sh
 
@@ -122,6 +126,15 @@ if grep -qE '^CLOUDFLARE_TUNNEL_TOKEN=$' "$ENV"; then
   (cd "$APP_DIR" && docker compose up -d postgres n8n)
 else
   (cd "$APP_DIR" && docker compose up -d)
+fi
+
+IMPORT=/opt/txn-agn-import/n8n-workflows.json
+if [[ -f $IMPORT && ! -f $IMPORT.done ]]; then
+  log "Importing n8n workflows from the old server"
+  for i in $(seq 1 60); do
+    curl -fsS -o /dev/null http://127.0.0.1:5678/healthz 2>/dev/null && break; sleep 5
+  done
+  "$APP_DIR/scripts/import-n8n-workflows.sh" "$IMPORT" && touch "$IMPORT.done"
 fi
 
 log "Done"
