@@ -57,7 +57,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        660,
+        880,
         0
       ],
       "parameters": {
@@ -67,7 +67,7 @@
         "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.urls.map(u => ({ url: u, enable_javascript: false, validate_micromarkup: true }))) }}",
+        "jsonBody": "={{ JSON.stringify([{ url: $json.url, enable_javascript: false, validate_micromarkup: true }]) }}",
         "options": {
           "timeout": 120000
         }
@@ -85,7 +85,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        880,
+        1320,
         0
       ],
       "parameters": {
@@ -115,7 +115,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
+        1540,
         0
       ],
       "parameters": {
@@ -128,7 +128,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        1760,
         0
       ],
       "parameters": {
@@ -156,7 +156,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1540,
+        1980,
         0
       ],
       "parameters": {
@@ -184,12 +184,39 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
+        2200,
         0
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Compact summary for the agent: facts only, small enough for a cheap model.\nconst c = $('Config').first().json;\nconst d = $('Discover').first().json;\nconst dfsErr = (r) => (r && r.status_code && r.status_code !== 20000) ? r.status_message : null;\nconst errOf = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 400) : null;\n\n// On-page (DataForSEO instant pages)\nconst op = $('OnPage').first().json || {};\n// DataForSEO reports some checks as true when they are GOOD; everything else true is a problem.\nconst POSITIVE = new Set(['is_https','has_html_doctype','canonical','seo_friendly_url','is_www','has_micromarkup','has_meta_title','has_meta_description']);\nconst isPositive = (k) => POSITIVE.has(k) || k.startsWith('seo_friendly_url');\nconst pages = (op.tasks || []).map(t => {\n  const it = (((t.result || [])[0] || {}).items || [])[0];\n  if (!it) return { url: (t.data || {}).url, error: t.status_message };\n  const m = it.meta || {};\n  const issues = Object.entries(it.checks || {}).filter(([k, v]) => v === true && !isPositive(k)).map(([k]) => k);\n  return {\n    url: it.url, status: it.status_code, onpageScore: it.onpage_score,\n    title: m.title || null, titleLength: m.title_length || (m.title || '').length,\n    description: m.description || null, descriptionLength: m.description_length || (m.description || '').length,\n    h1: ((m.htags || {}).h1 || []).slice(0, 3), canonical: m.canonical || null,\n    internalLinks: m.internal_links_count, wordCount: (m.content || {}).plain_text_word_count,\n    issues\n  };\n});\n\n// PageSpeed (mobile, homepage)\nconst ps = $('PageSpeed').first().json || {};\nconst lh = ps.lighthouseResult || {};\nconst cat = lh.categories || {}, au = lh.audits || {};\nconst pagespeed = lh.categories ? {\n  performance: Math.round((cat.performance || {}).score * 100),\n  lcp: (au['largest-contentful-paint'] || {}).displayValue,\n  cls: (au['cumulative-layout-shift'] || {}).displayValue,\n  tbt: (au['total-blocking-time'] || {}).displayValue\n} : { error: errOf(ps) || 'PageSpeed unavailable' };\n\n// Rankings: organic + maps, one item per keyword (paired with the Keywords node)\nconst kws = $('Keywords').all().map(i => i.json.keyword);\nconst mine = (s) => { s = String(s || '').toLowerCase(); return s.includes(c.site) || c.brand.some(b => s.includes(b)); };\nconst organic = $('SERP').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []).filter(x => x.type === 'organic');\n  const hit = items.find(x => mine(x.domain) || mine(x.url));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, url: hit ? hit.url : null,\n           top3: items.slice(0, 3).map(x => x.domain), error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\nconst maps = $('Maps').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []);\n  const hit = items.find(x => mine(x.domain) || mine(x.title));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, matched: hit ? hit.title : null,\n           top3: items.slice(0, 3).map(x => x.title + (x.rating ? ' (' + x.rating.value + '\u2605/' + x.rating.votes_count + ')' : '')),\n           error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\n\nconst cost = [op, ...$('SERP').all().map(i => i.json), ...$('Maps').all().map(i => i.json)]\n  .reduce((s, x) => s + (Number((x || {}).cost) || 0), 0);\n\nreturn [{ json: {\n  site: c.site, collectedAt: new Date().toISOString(),\n  siteChecks: d.checks, pagesAudited: pages.length, onpageError: errOf(op) || dfsErr(op), pages, pagespeed,\n  rankings: { location: c.location, organic, maps },\n  dataforseoCostUsd: Math.round(cost * 10000) / 10000\n} }];"
+        "jsCode": "// Compact summary for the agent: facts only, small enough for a cheap model.\nconst c = $('Config').first().json;\nconst d = $('Discover').first().json;\nconst dfsErr = (r) => (r && r.status_code && r.status_code !== 20000) ? r.status_message : null;\nconst errOf = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 400) : null;\n\n// On-page (DataForSEO instant pages)\nconst op = $('Rejoin').first().json || {};\n// DataForSEO reports some checks as true when they are GOOD; everything else true is a problem.\nconst POSITIVE = new Set(['is_https','has_html_doctype','canonical','seo_friendly_url','is_www','has_micromarkup','has_meta_title','has_meta_description']);\nconst isPositive = (k) => POSITIVE.has(k) || k.startsWith('seo_friendly_url');\nconst pages = (op.tasks || []).map(t => {\n  const it = (((t.result || [])[0] || {}).items || [])[0];\n  if (!it) return { url: (t.data || {}).url, error: t.status_message };\n  const m = it.meta || {};\n  const issues = Object.entries(it.checks || {}).filter(([k, v]) => v === true && !isPositive(k)).map(([k]) => k);\n  return {\n    url: it.url, status: it.status_code, onpageScore: it.onpage_score,\n    title: m.title || null, titleLength: m.title_length || (m.title || '').length,\n    description: m.description || null, descriptionLength: m.description_length || (m.description || '').length,\n    h1: ((m.htags || {}).h1 || []).slice(0, 3), canonical: m.canonical || null,\n    internalLinks: m.internal_links_count, wordCount: (m.content || {}).plain_text_word_count,\n    issues\n  };\n});\n\n// PageSpeed (mobile, homepage)\nconst ps = $('PageSpeed').first().json || {};\nconst lh = ps.lighthouseResult || {};\nconst cat = lh.categories || {}, au = lh.audits || {};\nconst pagespeed = lh.categories ? {\n  performance: Math.round((cat.performance || {}).score * 100),\n  lcp: (au['largest-contentful-paint'] || {}).displayValue,\n  cls: (au['cumulative-layout-shift'] || {}).displayValue,\n  tbt: (au['total-blocking-time'] || {}).displayValue\n} : { error: errOf(ps) || 'PageSpeed unavailable' };\n\n// Rankings: organic + maps, one item per keyword (paired with the Keywords node)\nconst kws = $('Keywords').all().map(i => i.json.keyword);\nconst mine = (s) => { s = String(s || '').toLowerCase(); return s.includes(c.site) || c.brand.some(b => s.includes(b)); };\nconst organic = $('SERP').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []).filter(x => x.type === 'organic');\n  const hit = items.find(x => mine(x.domain) || mine(x.url));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, url: hit ? hit.url : null,\n           top3: items.slice(0, 3).map(x => x.domain), error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\nconst maps = $('Maps').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []);\n  const hit = items.find(x => mine(x.domain) || mine(x.title));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, matched: hit ? hit.title : null,\n           top3: items.slice(0, 3).map(x => x.title + (x.rating ? ' (' + x.rating.value + '★/' + x.rating.votes_count + ')' : '')),\n           error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\n\nconst cost = [op, ...$('SERP').all().map(i => i.json), ...$('Maps').all().map(i => i.json)]\n  .reduce((s, x) => s + (Number((x || {}).cost) || 0), 0);\n\nreturn [{ json: {\n  site: c.site, collectedAt: new Date().toISOString(),\n  siteChecks: d.checks, pagesAudited: pages.length, onpageError: errOf(op) || dfsErr(op), pages, pagespeed,\n  rankings: { location: c.location, organic, maps },\n  dataforseoCostUsd: Math.round(cost * 10000) / 10000\n} }];"
+      }
+    },
+    {
+      "id": "n10",
+      "name": "Urls",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// DataForSEO rejects several URLs of one host in a single instant_pages request, so send one request per URL.\nreturn $json.urls.map(url => ({ json: { url } }));"
+      }
+    },
+    {
+      "id": "n11",
+      "name": "Rejoin",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge the per-URL on-page responses back into one object shaped like a single instant_pages response.\nconst tasks = [];\nlet cost = 0;\nlet error = null;\nfor (const i of $input.all()) {\n  const j = i.json || {};\n  cost += Number(j.cost) || 0;\n  if (j.error && !error) error = j.error;\n  for (const t of (j.tasks || [])) tasks.push(t);\n}\nreturn [{ json: { tasks, cost, error: tasks.length ? null : error } }];"
       }
     }
   ],
@@ -220,7 +247,7 @@
       "main": [
         [
           {
-            "node": "OnPage",
+            "node": "Urls",
             "type": "main",
             "index": 0
           }
@@ -231,7 +258,7 @@
       "main": [
         [
           {
-            "node": "PageSpeed",
+            "node": "Rejoin",
             "type": "main",
             "index": 0
           }
@@ -276,6 +303,28 @@
         [
           {
             "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urls": {
+      "main": [
+        [
+          {
+            "node": "OnPage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rejoin": {
+      "main": [
+        [
+          {
+            "node": "PageSpeed",
             "type": "main",
             "index": 0
           }
