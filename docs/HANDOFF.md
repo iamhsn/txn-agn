@@ -1,6 +1,6 @@
 # txn-agn handoff: SEO/AEO agents (for Claude Code)
 
-As of 18 Oct 2026, 16:10 IST. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
+As of 18 Oct 2026, 16:20 IST. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
 
 ## Read this first
 
@@ -17,7 +17,7 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 ## Decisions made
 
 - **Division of labour.** n8n collects data and will do any WordPress write-back. Agents only analyse, draft and prioritise. Agents have no publish access.
-- **Orchestrator.** Paperclip, one organization per site, one agent per organization.
+- **Orchestrator.** Paperclip, one organization per site. Each starts with one agent (SEO Lead) and grows into a small team (see Agent team plan).
 - **Agent engine.** OpenCode with models through OpenRouter. Paperclip's OpenCode adapter only supports an OpenRouter AI connection, so every model must be an `openrouter/...` model.
 - **SEO data.** DataForSEO and Google PageSpeed, called from an n8n workflow. OpenSEO is not used.
 - **Server.** Stay on KVM 1 (1 vCPU, 4 GB RAM). One agent run at a time.
@@ -42,7 +42,7 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 
 ### Dhobi & Co pilot
 - Organization "Dhobi & Co." (task prefix DHO). Agent **SEO Lead**: OpenCode adapter, working directory `/home/agent/work/dhobico`, timeout 1200 s, timed heartbeat off.
-- The agent's AI connection is Hassan's OpenRouter key, stored encrypted in Paperclip. Its model is currently `openrouter/google/gemma-4-31b-it:free`, which doesn't work (see Blocker).
+- The agent's AI connection is Hassan's OpenRouter key, stored encrypted in Paperclip. Its model is being switched to `openrouter/google/gemini-3.8-flash` (see Model setup).
 - Workspace `/home/agent/work/dhobico`: `AGENTS.md` (the brief: fetch data first, never crawl, never state anything not in the data, write `reports/YYYY-MM-DD.md`, comment the summary and top 5 fixes, mark the task done), plus `data/` and `reports/`.
 - Tasks DHO-1 to DHO-4 are all cancelled. No runs are queued.
 - A second organization, "Livo", holds an unused Claude agent from an early attempt. Leave it.
@@ -63,24 +63,35 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 - **Content:** the meta description says 24–48 hours, while the page says 48 hours.
 - **Already in place:** `llms.txt` exists, and the homepage title, meta description, H1 and canonical are fine.
 
-## Blocker: no usable model until OpenRouter credit lands
+## Model setup
 
-The OpenRouter account has never bought credits, so:
-- Only `:free` models work, capped at 50 requests a day. The counter resets at 00:00 UTC, which is 05:30 IST.
-- With the no-training filter on, the only usable free model is `google/gemma-4-31b-it:free`. Google has throttled it all day ("temporarily rate-limited upstream"). Those refusals don't count against the 50.
-- Hassan's Google AI Studio key is added in OpenRouter's integrations. OpenRouter ignores it until the account has bought credits ("Insufficient credits. This account never purchased credits").
-- Gemini 3.8 Flash works when called directly with the Google key (`opencode run --model google/gemini-3.8-flash` replied in 85 s). Paperclip rejects it, though ("Select an AI connection compatible with the new harness and model"), because the agent's connection must be OpenRouter.
+- The $10 OpenRouter credit landed on 18 Oct. The key has a $10 monthly limit and the no-training filter is on.
+- SEO Lead's model is `openrouter/google/gemini-3.8-flash`. Hassan's Google AI Studio key is added in OpenRouter's integrations, so OpenRouter should route Gemini calls through his own Google quota now that the account has bought credits. Confirm with `byok_usage_daily` from `GET https://openrouter.ai/api/v1/key` (called as agent with the OpenRouter key).
+- Why not free models: with the no-training filter on, the only free option was `google/gemma-4-31b-it:free`, which Google throttled all day on 18 Oct. Failed attempts don't count against the free quota.
+- Paperclip's OpenCode adapter only accepts an OpenRouter AI connection, so a direct `google/...` model is rejected ("Select an AI connection compatible with the new harness and model") even though OpenCode itself can call Google with `GOOGLE_GENERATIVE_AI_API_KEY`.
 
-**Fix:** once Hassan's $10 OpenRouter credit lands, set SEO Lead's model to `openrouter/google/gemini-3.8-flash`. OpenRouter should then route it through his Google key. Confirm with `byok_usage_daily` from `GET https://openrouter.ai/api/v1/key`, called as agent with the OpenRouter key.
+## Agent team plan
+
+Each site's organization grows in this order, one step at a time, and only after the previous step works:
+
+| Role | Added | Job |
+|---|---|---|
+| SEO Lead (Paperclip CEO, so it manages the others) | Now | Reads the weekly data, sets priorities, creates tasks for the others, reviews their work before it goes to Hassan |
+| Writer | After the first good audit | Meta descriptions, FAQ answers and schema, service-area pages, blog posts, in each brand's voice |
+| Researcher | When content production starts | Keyword gaps, questions people ask AI assistants, competitor pages. Needs DataForSEO keyword endpoints added to the n8n workflow |
+| Publisher | Never an agent | WordPress write-back is an n8n workflow that runs only after Hassan approves |
+
+n8n already does the data gathering, so there is no separate data-collection agent. Runs queue one at a time on the 1-vCPU server; cap concurrent runs at 1 per agent. Copy the proven team to the 5 client sites only after it works on Dhobi & Co.
 
 ## Next steps, in order
 
-1. **Model.** After the credit lands: Paperclip → Agents → SEO Lead → Harness / Runtime → Model → `openrouter/google/gemini-3.8-flash` → Run test → Save changes. Saving runs a "hello" probe that can take over 60 s and uses one request.
+1. **Model.** Confirm SEO Lead runs on `openrouter/google/gemini-3.8-flash` (Paperclip → Agents → SEO Lead → Harness / Runtime). If not, select it, Run test, Save changes. Saving runs a "hello" probe that can take over 60 s.
 2. **Second test audit.** Create a task assigned to SEO Lead using the description below. Watch the run, then check every claim in the report against `data/<date>.json` and the facts above.
 3. **Schedule and caps.** Add a weekly routine (Mondays 09:00, Asia/Kolkata). Set budgets for the company and the agent. Turn on the heartbeat only if the routine needs it.
-4. **Approvals.** Send proposed fixes to Telegram for Hassan's approval. Build WordPress write-back as an n8n workflow later, run only after approval.
-5. **More data.** Add Search Console (clicks, queries) and Bing to the SEO data workflow.
-6. **Client sites.** For each of the 5: a `SITES` entry, a Paperclip organization with one agent, and a workspace `AGENTS.md` copied from dhobico's.
+4. **Writer.** Add a Writer agent reporting to SEO Lead and test one hand-off: SEO Lead asks for a rewritten meta description, the Writer drafts it, SEO Lead reviews, Hassan approves.
+5. **Approvals.** Send proposed fixes to Telegram for Hassan's approval. Build WordPress write-back as an n8n workflow later, run only after approval.
+6. **More data.** Add Search Console (clicks, queries) and Bing to the SEO data workflow.
+7. **Client sites.** For each of the 5: a `SITES` entry, a Paperclip organization with the proven team, and workspace `AGENTS.md` files copied from dhobico's.
 
 Task description for step 2 (paste as is):
 
