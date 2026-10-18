@@ -114,6 +114,18 @@ Each site's organization grows in this order, one step at a time, and only after
 
 n8n already does the data gathering, so there is no separate data-collection agent. Runs queue one at a time on the 1-vCPU server; cap concurrent runs at 1 per agent. Copy the proven team to the 5 client sites only after it works on Dhobi & Co.
 
+## Phase 2 setup, 19 Oct 2026 (01:20 to 01:55 IST)
+
+Done:
+- Repo pulled here (3 local commits rebased onto origin) and on the server. `scripts/site-workspace.sh` ran for dhobico.com and ladvalaw.com. It replaced `/home/agent/work/dhobico/AGENTS.md` with the template from `agents/seo-lead.md`; the old brief is in `AGENTS.md.bak-20261018` and `agents/dhobico/AGENTS.md`.
+- n8n "SEO data (agents)" now has ladvalaw.com in Config. The CLI import deactivated the workflow, so it was reactivated and n8n restarted. Backup of the previous version: `/root/n8n-backups/seo-data-2026-10-19-0122.json` on the server. Webhook test for ladvalaw.com returned rankings (HTTP 200).
+- Paperclip board access: board API key "claude-code" for the `agent` user, created via `paperclipai connect --persona board` (approval link must use the Tailscale address `https://txn-agn.tailc354f1.ts.net:8443/cli-auth/...`, not localhost). Expires 17 Nov 2026.
+- Both companies: budget $1/month. SEO Lead: `openrouter/google/gemini-3.8-flash`, work directory per site, budget $0.75, max 1 concurrent run, heartbeat off. Ladva's SEO Lead also got skills off, 900 s timeout and `dangerouslySkipPermissions` like Dhobi's. New Writer agents (OpenCode, `openrouter/google/gemini-3.5-flash-lite`, `/home/agent/work/<site>/writer`, $0.25, 1 run, heartbeat off, reports to SEO Lead). `gemini-3.8-flash-lite` does not exist. Writers inherited `canCreateAgents: true`; consider turning that off.
+
+Failed: audit tasks DHO-7 and LAD-2 (assigned to SEO Lead) each failed twice with `[Google AI Studio] Gemini models require OpenRouter reasoning details to be preserved ... Corrupted thought signature` (HTTP 400) on `gemini-3.8-flash`, after the first tool call. Cost of the four failed attempts: about $0.085 (OpenRouter `usage` 0.386 to 0.471; `byok_usage` unchanged at 0.199). Both tasks were cancelled so Paperclip would stop retrying. No reports were written, so step 6 (report check, cost, Monday routine) was not done.
+
+Next: work out the Gemini thought-signature error before re-running. Options: route 3.8-flash through OpenRouter's own providers instead of the Google AI Studio BYOK key (the key set up on 18 Oct), or use `gemini-3.5-flash-lite`, which worked for DHO-6. Then create the audit tasks again and do the report check.
+
 ## Next steps, in order
 
 1. **Model comparison.** Re-run the audit on `gemini-3.8-flash` with the new brief and compare quality and cost with DHO-6. Pick one model. Rerun to confirm the previous-run fix.
