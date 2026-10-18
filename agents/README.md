@@ -11,11 +11,11 @@ Each site gets a workspace on the server at `/home/agent/work/<site>/`. Copy the
 
 | Agent | Model | Why | Paperclip budget |
 |---|---|---|---|
-| SEO Lead | `openrouter/google/gemini-3.8-flash` | Reads data and ranks fixes. Needs reasoning; the weekly audit runs once | $2 / month |
-| Writer | `openrouter/google/gemini-3.8-flash-lite` | Short drafts from a clear brief. Switch to flash only if drafts fail review twice | $1 / month |
-| Company total | | | $3 / month per site |
+| SEO Lead | `openrouter/google/gemini-3.8-flash` | Reads data and ranks fixes. The weekly audit runs once | $0.75 / month |
+| Writer | `openrouter/google/gemini-3.8-flash-lite` | Short drafts from a clear brief. Switch to flash only if drafts fail review twice | $0.25 / month |
+| Company total | | | $1 / month per site (hard stop) |
 
-Six sites at $3 each is $18 a month at most, so raise the OpenRouter key limit from $10 to $20 before onboarding all five clients.
+Expected spend per site per month: DataForSEO data $0.16 (4 runs at $0.04), audits $0.40 (4 at about $0.10), Writer drafts about $0.10. That's about $0.65, or $6.50 for 10 sites. The $10 OpenRouter limit covers 10 sites. If an audit can't get under $0.10, move the fix ranking into n8n code and let the model only write the report.
 
 ## Keeping a run cheap
 
