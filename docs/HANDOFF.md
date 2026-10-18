@@ -1,6 +1,6 @@
 # txn-agn handoff: SEO/AEO agents (for Claude Code)
 
-As of 18 Oct 2026, 17:10 IST. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
+As of 18 Oct 2026, 17:35 IST. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
 
 ## Read this first
 
@@ -45,7 +45,7 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 - The agent's AI connection is Hassan's OpenRouter key, stored encrypted in Paperclip. Its model is being switched to `openrouter/google/gemini-3.8-flash` (see Model setup).
 - Workspace `/home/agent/work/dhobico`: `AGENTS.md` (the brief: fetch data first, never crawl, never state anything not in the data, write `reports/YYYY-MM-DD.md`, comment the summary and top 5 fixes, mark the task done), plus `data/` and `reports/`.
 - Tasks DHO-1 to DHO-4 are all cancelled. No runs are queued.
-- A second organization, "Livo", holds an unused Claude agent from an early attempt. Leave it.
+- A second organization, "Livo", holds an unused Claude agent from an early attempt. Leave it. A third, "ACG United" (prefix ACG, one SEO Lead agent, one onboarding task), also exists and isn't described anywhere else. Ask Hassan what it is for.
 
 ### n8n workflow "SEO data (agents)"
 - Workflow id `faKFccg43wThoWDE`, active. Source in the repo: `n8n/seo-data-workflow.json`. The runbook explains how to restore it and add sites.
@@ -84,12 +84,14 @@ DHO-5 on `openrouter/google/gemini-3.8-flash` finished and closed itself, so the
 - It curled the homepage twice to look at the FAQ, although the brief says not to crawl.
 - It spent 6 steps at the end working out how to comment and set the task done (searching for a script, printing env vars, writing a Python helper). Each step re-sends a context of 25–30k tokens.
 
-**Fix:** (new brief deployed to the server on 18 Oct, 17:20 IST; the old one is saved as `AGENTS.md.bak-20261018`, and the 17 Oct data file is now `data/2026-10-17.json`. Skills, model and the test run still need Paperclip UI steps. `paperclipai agent skills:sync` exists but needs a board login, and the CLI returned 401 without one.) Baseline before the next run, from OpenRouter: `usage` $0.333, `byok_usage` $0.146, limit remaining $9.667.
+**Fix, applied 18 Oct (17:20 to 17:30 IST).** New brief `agents/dhobico/AGENTS.md` is on the server (old one saved as `AGENTS.md.bak-20261018`; the 17 Oct data file moved to `data/2026-10-17.json`). In Paperclip (Dhobi & Co. → SEO Lead) four of the five skills are switched off and `first-task` stays off; Paperclip switches the core `paperclip` skill back on whenever it is turned off, so the brief's "do not load skills" line covers that one. Model is now `openrouter/google/gemini-3.5-flash-lite`. There is no `gemini-3.8-flash-lite`; 3.5 flash-lite costs $0.30 in / $2.50 out per million tokens, against $0.825 / $4.125 for 3.8-flash. Saving the model took over 2 minutes (the probe).
 
-**The fix:** `agents/dhobico/AGENTS.md` is a rewritten brief for a 4-call run. One fetch command that prints everything needed plus last run's rankings, one write, and a one-line `PATCH /api/issues/$PAPERCLIP_TASK_ID` that posts the comment and sets the task done. It bans skills, `todowrite` and crawling. To apply it:
-1. Copy it to `/home/agent/work/dhobico/AGENTS.md` (owner `agent`). Also move `seo-data-test.json` to `data/2026-10-17.json` so the new brief finds a previous run.
-2. In Paperclip, open SEO Lead → Skills and untick all five Paperclip skills. I haven't found how to do it outside the UI; check `paperclipai` CLI help first. If they can't be removed, the brief's "do not load skills" line is the fallback.
-3. Test with a cheaper model. There is no `gemini-3.8-flash-lite` on OpenRouter. The cheapest current option is `google/gemini-3.5-flash-lite` ($0.30 in / $2.50 out per million tokens, against $0.825 / $4.125 for 3.8-flash). Compare the report against 3.8-flash before keeping it.
+**Result, task DHO-6:** 6 steps, 5 tool calls (4 bash, 1 write), 31.5k fresh input tokens (was 226k), 73k cache-read, 1.8k output, 6.8k reasoning. Run cost $0.033; OpenRouter `usage` rose from $0.333 to $0.371 and `byok_usage` from $0.146 to $0.164, so BYOK is again about half. Under 1 minute. The agent followed the brief, wrote "not in top 30", and reported the 13 skipped pages. Quality problems:
+- **Previous-run bug in the brief (fixed in the repo and on the server after this run):** it picked the newest file in `data/`, which was today's file from DHO-5, so DHO-6 said "unchanged since previous" for Maps ranks that had in fact moved since 17 Oct. It now picks the newest file that isn't today's.
+- It invented image paths in two fixes (`/images/hero-steam.jpg`). A rule against this is now in the brief.
+- Its top 5 is weaker than DHO-5's: noindex for thank-you and cookie pages, an `&amp;` in the `llms.txt` first line, and alt text. It left out LocalBusiness and FAQPage schema. Part of the reason is the `TODO_CONFIRM` rule; some may be the cheaper model. Compare a 3.8-flash run on the same brief before choosing a model.
+- The `&amp;` finding may be an artefact of how the workflow reads `llms.txt` (it escapes HTML). Check the real file before acting.
+- DHO-6's report overwrote DHO-5's `reports/2026-10-18.md`. DHO-5's report is no longer on the server; the review below is the record. The brief should write a new file per run (for example add the time) if you want to keep both.
 
 **Report check against `data/2026-10-18.json`.** Maps and PageSpeed numbers, the competitor names and the 18 → 11 / 5 → 2 / 6 → 3 comparison are correct. Problems:
 - **LocalBusiness JSON-LD was invented.** Opening hours (08:00–20:00 every day), coordinates (17.3850, 78.4867, which is just the centre of Hyderabad) and the price range appear nowhere in the data. The area list and phone number also aren't in the data. The agent may have taken some from the homepage HTML, but none of it was checked against a source. Do not paste this block until Hassan confirms every value from the Google Business Profile.
@@ -114,9 +116,9 @@ n8n already does the data gathering, so there is no separate data-collection age
 
 ## Next steps, in order
 
-1. **Apply the token cut** (see "DHO-5 audit"): deploy `agents/dhobico/AGENTS.md`, remove the Paperclip skills from SEO Lead, then try `google/gemini-3.5-flash-lite`. Each change to the model runs a "hello" probe that can take over 60 s.
+1. **Model comparison.** Re-run the audit on `gemini-3.8-flash` with the new brief and compare quality and cost with DHO-6. Pick one model. Rerun to confirm the previous-run fix.
 2. **Fix the on-page audit gap** in the n8n workflow (15 of 20 pages failed), then re-export `n8n/seo-data-workflow.json` to the repo.
-3. **Third test audit.** Create a task assigned to SEO Lead using the description below. Record steps, tokens and cost from the run log, and `byok_usage_daily` before and after. Check every claim in the report against `data/<date>.json`. Target: under 10 steps and under $0.10.
+3. **Third test audit.** Create a task assigned to SEO Lead using the description below. Record steps, tokens and cost from the run log, and `byok_usage` before and after. Check every claim in the report against `data/<date>.json`.
 4. **Schedule and caps.** Add a weekly routine (Mondays 09:00, Asia/Kolkata). Set budgets for the company and the agent. Turn on the heartbeat only if the routine needs it.
 5. **Writer.** Add a Writer agent reporting to SEO Lead and test one hand-off: SEO Lead asks for a rewritten meta description, the Writer drafts it, SEO Lead reviews, Hassan approves.
 6. **Approvals.** Send proposed fixes to Telegram for Hassan's approval. Build WordPress write-back as an n8n workflow later, run only after approval.
