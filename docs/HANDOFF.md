@@ -118,11 +118,15 @@ Do not crawl the site. Do not fetch other pages unless one specific claim needs 
 - n8n credential pitfalls: DataForSEO needs the API password, not the account password. A Query Auth credential's Name must be exactly `key`. A key without a Name sends requests anonymously and hits Google's shared quota.
 - The `agent` user was first created with uid 1000, the same uid the n8n container runs as, which would have let agents stop n8n or read its files. It was recreated as uid 2000. Keep the two different.
 
-## Start Claude Code on the server
+## Start Claude Code on Hassan's desktop
 
-```
-curl -fsSL https://claude.ai/install.sh | bash && exec bash -l
-cd /opt/txn-agn && git pull --ff-only && claude
-```
+Claude Code runs on the desktop, not the server, and reaches the server with `ssh root@txn-agn` over Tailscale. `CLAUDE.md` in the repo root has the exact commands and rules.
 
-First message to Claude Code: "Read docs/HANDOFF.md and docs/RUNBOOK.md, then tell me the current state in five lines and what you'd do first."
+1. Make sure Tailscale is connected, then check SSH works (it may ask for a one-time browser approval):
+   `ssh root@txn-agn hostname` should print `srv1305371`.
+2. Get the repo: `git clone https://github.com/iamhsn/txn-agn && cd txn-agn`
+3. Start Claude Code in that folder (`claude` in a terminal, or open the folder in the Claude desktop app's Code tab).
+
+First message to Claude Code: "Read CLAUDE.md, docs/HANDOFF.md and docs/RUNBOOK.md, check the server over ssh, then tell me the current state in five lines and what you'd do first."
+
+Optional: connect Claude Code to n8n's MCP server at `https://txn-agn.tailc354f1.ts.net/mcp-server/http` (works while Tailscale is on). Expose only the SEO workflows.
