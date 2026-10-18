@@ -1,6 +1,6 @@
 # txn-agn handoff: SEO/AEO agents (for Claude Code)
 
-As of 18 Oct 2026, 16:20 IST. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
+As of 18 Oct 2026, 17:10 IST. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
 
 ## Read this first
 
@@ -56,12 +56,14 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 
 ### What the data says about dhobico.com (17 Oct)
 - **Google organic:** not in the top 30 for any of the 5 keywords. JustDial, Tumbledry, Laundroway and IndiaMART hold those spots.
-- **Google Maps:** #5 for "steam ironing service hyderabad", #6 for "doorstep ironing service hyderabad", #20 for "ironing service in hyderabad". Not found for "ironing service near me" or "laundry pickup and delivery hyderabad".
+- **Google Maps:** #5 for "steam ironing service hyderabad", #6 for "doorstep ironing service hyderabad", #18 for "ironing service in hyderabad". Not found for "ironing service near me" or "laundry pickup and delivery hyderabad". (An earlier version of this file said #20; the data file says #18.)
 - **Homepage schema:** WebSite, Organization, WebPage and BreadcrumbList are present. No LocalBusiness, and no FAQPage even though the page has a 10-question FAQ.
 - **Speed:** mobile PageSpeed 67. LCP 4.8 s, CLS 0.02, TBT 280 ms. Render-blocking resources on every page.
 - **Sitemap:** 37 URLs, including `/thank-you/` and `/cookie-policy/`, which shouldn't be indexed.
 - **Content:** the meta description says 24–48 hours, while the page says 48 hours.
 - **Already in place:** `llms.txt` exists, and the homepage title, meta description, H1 and canonical are fine.
+
+Second reading, 18 Oct (`data/2026-10-18.json`): Maps #11, #2 and #3 for the three keywords that rank (up from #18, #5, #6). Still not in the top 30 organically for all 5. Mobile PageSpeed 57 (down from 67), LCP 4.8 s, TBT 540 ms (up from 280 ms). The drop is one reading, so don't treat it as a trend yet.
 
 ## Model setup
 
@@ -69,6 +71,31 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 - SEO Lead's model is `openrouter/google/gemini-3.8-flash`. Hassan's Google AI Studio key is added in OpenRouter's integrations, so OpenRouter should route Gemini calls through his own Google quota now that the account has bought credits. Confirm with `byok_usage_daily` from `GET https://openrouter.ai/api/v1/key` (called as agent with the OpenRouter key).
 - Why not free models: with the no-training filter on, the only free option was `google/gemma-4-31b-it:free`, which Google throttled all day on 18 Oct. Failed attempts don't count against the free quota.
 - Paperclip's OpenCode adapter only accepts an OpenRouter AI connection, so a direct `google/...` model is rejected ("Select an AI connection compatible with the new harness and model") even though OpenCode itself can call Google with `GOOGLE_GENERATIVE_AI_API_KEY`.
+
+## DHO-5 audit: what it cost and what was wrong (18 Oct)
+
+DHO-5 on `openrouter/google/gemini-3.8-flash` finished and closed itself, so the pipeline works end to end. Report: `reports/2026-10-18.md` on the server.
+
+**Cost.** $0.39 for 35 model steps: 226k fresh input tokens, 1.2M cache-read tokens, 10k output, 16k reasoning. Hassan's OpenRouter numbers: `usage` $0.33, `byok_usage_daily` $0.15. So about a third went through his Google key. Not explained yet. Look at `byok_usage_daily` before and after the next run to see whether it tracks the Gemini calls or only some of them.
+
+**Where the tokens went** (from the Paperclip run log, `~/.paperclip/instances/default/data/run-logs/<company>/<agent>/<run>.ndjson`):
+- Paperclip injects 5 skills into every run (`paperclip`, `paperclip-board`, `paperclip-converting-plans-to-tasks`, `paperclip-create-agent`, `para-memory-files`). The agent loaded `paperclip` (about 11k tokens) and carried it in context from step 1.
+- 16 of 22 bash calls were `jq` exploration of the data file, because the fetch command printed only part of it. 4 `todowrite` calls, 2 `glob` and 2 `read` calls added more.
+- It curled the homepage twice to look at the FAQ, although the brief says not to crawl.
+- It spent 6 steps at the end working out how to comment and set the task done (searching for a script, printing env vars, writing a Python helper). Each step re-sends a context of 25–30k tokens.
+
+**Fix, ready in the repo and not yet on the server:** `agents/dhobico/AGENTS.md` is a rewritten brief for a 4-call run. One fetch command that prints everything needed plus last run's rankings, one write, and a one-line `PATCH /api/issues/$PAPERCLIP_TASK_ID` that posts the comment and sets the task done. It bans skills, `todowrite` and crawling. To apply it:
+1. Copy it to `/home/agent/work/dhobico/AGENTS.md` (owner `agent`). Also move `seo-data-test.json` to `data/2026-10-17.json` so the new brief finds a previous run.
+2. In Paperclip, open SEO Lead → Skills and untick all five Paperclip skills. I haven't found how to do it outside the UI; check `paperclipai` CLI help first. If they can't be removed, the brief's "do not load skills" line is the fallback.
+3. Test with a cheaper model. There is no `gemini-3.8-flash-lite` on OpenRouter. The cheapest current option is `google/gemini-3.5-flash-lite` ($0.30 in / $2.50 out per million tokens, against $0.825 / $4.125 for 3.8-flash). Compare the report against 3.8-flash before keeping it.
+
+**Report check against `data/2026-10-18.json`.** Maps and PageSpeed numbers, the competitor names and the 18 → 11 / 5 → 2 / 6 → 3 comparison are correct. Problems:
+- **LocalBusiness JSON-LD was invented.** Opening hours (08:00–20:00 every day), coordinates (17.3850, 78.4867, which is just the centre of Hyderabad) and the price range appear nowhere in the data. The area list and phone number also aren't in the data. The agent may have taken some from the homepage HTML, but none of it was checked against a source. Do not paste this block until Hassan confirms every value from the Google Business Profile.
+- **">100" is wrong.** The workflow checks only Google's top 30. The right wording is "not in top 30". The new brief says so.
+- **Unsupported cause:** the report says the FAQ schema is added by client-side JavaScript. Nothing in the data shows that. Check the page source before acting on fix 2.
+- **Fix 3 (new H1) and the PageSpeed explanation** ("primarily caused by TBT") are opinion. Treat them as suggestions.
+- **Missed data gap.** The on-page audit returned errors for 15 of 20 pages ("Invalid Field: 'url' - duplicate crawl host"), so only 5 pages were audited. The report says "all audited pages" and never mentions the gap. Every on-page issue is therefore based on 5 pages. Cause, probably: `OnPage` in the n8n workflow sends 20 URLs for one host in a single `instant_pages` request. Try one URL per request. Not fixed.
+- Minor: a stray `reports/2025-10-17.md` has the wrong year. The sitemap snippet in fix 4 is a guess at the file's format; the real sitemap comes from the SEO plugin.
 
 ## Agent team plan
 
@@ -85,25 +112,19 @@ n8n already does the data gathering, so there is no separate data-collection age
 
 ## Next steps, in order
 
-1. **Model.** Confirm SEO Lead runs on `openrouter/google/gemini-3.8-flash` (Paperclip → Agents → SEO Lead → Harness / Runtime). If not, select it, Run test, Save changes. Saving runs a "hello" probe that can take over 60 s.
-2. **Second test audit.** Create a task assigned to SEO Lead using the description below. Watch the run, then check every claim in the report against `data/<date>.json` and the facts above.
-3. **Schedule and caps.** Add a weekly routine (Mondays 09:00, Asia/Kolkata). Set budgets for the company and the agent. Turn on the heartbeat only if the routine needs it.
-4. **Writer.** Add a Writer agent reporting to SEO Lead and test one hand-off: SEO Lead asks for a rewritten meta description, the Writer drafts it, SEO Lead reviews, Hassan approves.
-5. **Approvals.** Send proposed fixes to Telegram for Hassan's approval. Build WordPress write-back as an n8n workflow later, run only after approval.
-6. **More data.** Add Search Console (clicks, queries) and Bing to the SEO data workflow.
-7. **Client sites.** For each of the 5: a `SITES` entry, a Paperclip organization with the proven team, and workspace `AGENTS.md` files copied from dhobico's.
+1. **Apply the token cut** (see "DHO-5 audit"): deploy `agents/dhobico/AGENTS.md`, remove the Paperclip skills from SEO Lead, then try `google/gemini-3.5-flash-lite`. Each change to the model runs a "hello" probe that can take over 60 s.
+2. **Fix the on-page audit gap** in the n8n workflow (15 of 20 pages failed), then re-export `n8n/seo-data-workflow.json` to the repo.
+3. **Third test audit.** Create a task assigned to SEO Lead using the description below. Record steps, tokens and cost from the run log, and `byok_usage_daily` before and after. Check every claim in the report against `data/<date>.json`. Target: under 10 steps and under $0.10.
+4. **Schedule and caps.** Add a weekly routine (Mondays 09:00, Asia/Kolkata). Set budgets for the company and the agent. Turn on the heartbeat only if the routine needs it.
+5. **Writer.** Add a Writer agent reporting to SEO Lead and test one hand-off: SEO Lead asks for a rewritten meta description, the Writer drafts it, SEO Lead reviews, Hassan approves.
+6. **Approvals.** Send proposed fixes to Telegram for Hassan's approval. Build WordPress write-back as an n8n workflow later, run only after approval.
+7. **More data.** Add Search Console (clicks, queries) and Bing to the SEO data workflow.
+8. **Client sites.** For each of the 5: a `SITES` entry, a Paperclip organization with the proven team, and workspace `AGENTS.md` copied from `agents/dhobico/AGENTS.md`.
 
-Task description for step 2 (paste as is):
+Task description for step 3 (paste as is). The steps live in `AGENTS.md`, so the task stays short:
 
 ```
-Your working directory is /home/agent/work/dhobico. Read AGENTS.md there and follow it exactly. Keep the number of steps small:
-
-1. Run this ONE command to fetch the facts (takes about 30 seconds):
-   mkdir -p data && curl -sS -m 300 -H "X-SEO-Token: $SEO_DATA_TOKEN" "http://127.0.0.1:5678/webhook/seo-data?site=dhobico.com" -o data/$(date +%F).json && jq -c "{siteChecks, pagespeed, rankings, pages: [.pages[] | {url, title, titleLength, descriptionLength, h1, issues}]}" data/$(date +%F).json
-2. Using ONLY that output, write reports/$(date +%F).md as AGENTS.md describes (3-line summary, top 5 fixes with exact paste-ready text/code, rankings table, short checklist).
-3. Post the 3-line summary and top 5 fixes as a comment on this task, then set this task to done.
-
-Do not crawl the site. Do not fetch other pages unless one specific claim needs confirming. Never state anything that is not in the data. You are read-only: never change the website.
+Your working directory is /home/agent/work/dhobico. Read AGENTS.md there and follow it exactly. A normal run is 4 tool calls.
 ```
 
 ## Other open work (not SEO)
