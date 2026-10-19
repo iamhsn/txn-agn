@@ -119,6 +119,30 @@ Not done:
 - **Ladva Law's Maps data is empty** for all 10 keywords. That is plausible for a law firm, but check one by hand in Google Maps before the SEO Lead tells a client so.
 - The scratch workflow "tmp OpenSEO tool list" was deleted after use.
 
+## Team, Reviewer and routines, 19 to 20 Oct 2026
+
+Built (details in `agents/README.md`):
+- **Agents per site:** SEO Lead and Developer on `claude-haiku-5.5`, Writer on `google/gemini-3.5-flash-lite`. Budgets $0.75 / $0.50 / $0.25, company hard stop $1.50. Heartbeat off, 1 concurrent run, nobody except SEO Lead can create agents. **Deviations from the request:** SEO Lead and Developer stay on Haiku, not `gemini-3.8-flash`, because 3.8 flash failed twice on 19 Oct ("corrupted thought signature") and costs about 8 times more. Writer is not on a free model: the only free tool-capable model this account may use that worked in a direct test, `google/gemma-4-26b-a4b-it:free`, stalled for over 5 minutes as a Writer (it also added "free" to a meta description, which was not in the facts). `gemini-3.8-flash-lite` does not exist.
+- **Files:** `agents/developer.md`, `scripts/check-copy.sh` (the Reviewer, copied to each workspace as `bin/check-copy.sh`), `agents/seo-lead.md` (new report sections, Writer to check-copy to Developer flow), `agents/writer.md`, `scripts/site-workspace.sh` (now also creates `writer/`, `developer/`, `bin/`, `drafts/`; optional 4th argument is the WordPress base URL). Ladva's base is `https://www.ladvalaw.com`.
+- **Backlinks** added to the n8n webhook (`openseo.backlinks`: overview, newest 100 rows, new links, lost links, spam flag). Refreshed on the first Monday or when none is saved, otherwise the last saved copy is reused (it is read back from `seo_snapshots`). About 80 credits per site per refresh.
+- **n8n workflow "SEO monthly pull"** (`n8n/seo-monthly-pull.json`, id `seoMonthlyPull01`): Mondays 07:00 Asia/Kolkata, acts only on the first Monday, calls the webhook for both sites.
+- **Paperclip routines:** weekly Mon 09:00 (existing) and monthly Mon 10:00 (new; the brief makes the agent stop unless it is the first Monday, because cron cannot say "first Monday"). Dhobi monthly routine `988742d3-f61b-4ac4-91c2-f55a9f57a910`, Ladva `650d44ba-4c3c-40fb-bb2e-c6d5bd9840a2`. OpenSEO's own rank tracker already runs weekly at Mon 06:00 IST.
+- **Field names differ from the request:** the audit is `onpage` (not `siteAudit`); `pagesAudited` is the pages crawled by the audit.
+
+Test results:
+- **Weekly audit, both sites:** about 3 to 4 minutes each, about $0.010 per site (OpenRouter usage rose $0.020 for the pair). Numbers in both reports match the data: PageSpeed, every Maps and organic position, audit issues, backlink totals, spam counts, schema gaps. **Wrong or weak statements:** Dhobi called the backlink copy "last month's refresh" (it is from earlier that day), its summary proposed a disavow review while its Backlinks section said none, it suggested a 48-character title (rule is 50 to 60) and skipped the Writer for it, and it wrote "38 of 37 pages". Ladva said "100 of 100 new links" (30 are new; 100 is the row count) and "a normal run of 3 to 15 a month" (the data shows 12, 45 and 195 for Jul to Sep). The brief now has rules against each of these; not re-run.
+- **A stale-data bug found and fixed:** the first test used the old data file. The fetch took longer than OpenCode's 120 s tool timeout, the agent silently used the morning's file, and wrote an old-data report. The brief now deletes today's file first, asks for `timeout: 300000`, and blocks the task if the fetch fails.
+- **Dry run, Dhobi homepage meta description:** Writer task done in 52 s, draft `PASS` in `check-copy.sh`; the wording was clumsy ("our doorstep ironing service hyderabad") but used only the given facts. Developer task blocked in 91 s for $0.011 with "needs WP credentials" and also noted the missing SEO plugin field name. Nothing was written to WordPress.
+- Cost figures: SEO Lead audit about $0.010, Developer blocked run $0.011, Writer under $0.005 per draft.
+
+Blocked or open:
+- **WordPress access.** No application passwords exist. Create one per site (WordPress, Users, Profile, Application Passwords), add `WP_DHOBICO_USER`, `WP_DHOBICO_APP_PASSWORD`, `WP_LADVALAW_USER`, `WP_LADVALAW_APP_PASSWORD` to `/home/agent/.config/paperclip.env`, and restart Paperclip. Until then the Developer cannot work.
+- **SEO plugin field.** Which plugin (Yoast, Rank Math) stores meta descriptions, and whether its field is exposed over REST, is unknown. Developer blocks meta changes until a task names the field.
+- **Keyword research** in the monthly task is not automated; the brief says so. Add OpenSEO `research_keywords` to the monthly n8n pull if wanted.
+- **AI answers** are empty until an AI visibility tracker exists in OpenSEO.
+- **Dhobi SEO Lead budget:** $0.52 of $0.75 is already spent this month (the early DHO-5 run was $0.39). It will stop at $0.75; raise it if needed.
+- The Writer on flash-lite is untested on a law-firm draft. Test one before the Ladva Writer handles anything real.
+
 ## Agent team plan
 
 Each site's organization grows in this order, one step at a time, and only after the previous step works:

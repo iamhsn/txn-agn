@@ -87,12 +87,12 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2860,
+        3960,
         0
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Compact summary for the agent: facts only, small enough for a cheap model.\nconst c = $('Config').first().json;\nconst d = $('Discover').first().json;\nconst errOf = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 300) : null;\nconst sc = (x) => (x && x.structuredContent) || {};\n\n// On-page: OpenSEO site audit (runs monthly; the latest completed audit is read every time)\nconst gate = $('Audit gate').first().json;\nconst ai = $('OpenSEO audit issues').first().json || {};\nconst iss = sc(ai);\nlet started = null;\ntry { started = sc($('OpenSEO audit start').first().json); } catch (e) { started = null; }\nconst issues = (iss.issues || []).map(i => ({ severity: i.severity, issueType: i.issueType, url: i.url, details: i.details, howToFix: String(i.howToFix || '').slice(0, 220) }));\nconst onpage = {\n  audit: { auditId: gate.auditId, completedAt: gate.completedAt, pagesCrawled: gate.pagesCrawled, sitemapPagesListed: (d.checks.sitemap || {}).pagesListed,\n           startedThisRun: !!(started && !errOf($('OpenSEO audit start').first().json)), plan: gate.reason },\n  issueSummary: iss.summary || [],\n  issues,\n  error: gate.auditId ? errOf(ai) : null,\n  note: gate.auditId ? null : 'No completed OpenSEO audit exists yet (' + gate.reason + '). Say so; do not report on-page findings.'\n};\n\n// PageSpeed (mobile, homepage)\nconst ps = $('PageSpeed').first().json || {};\nconst lh = ps.lighthouseResult || {};\nconst cat = lh.categories || {}, au = lh.audits || {};\nconst pagespeed = lh.categories ? {\n  performance: Math.round((cat.performance || {}).score * 100),\n  lcp: (au['largest-contentful-paint'] || {}).displayValue,\n  cls: (au['cumulative-layout-shift'] || {}).displayValue,\n  tbt: (au['total-blocking-time'] || {}).displayValue\n} : { error: errOf(ps) || 'PageSpeed unavailable' };\n\n// Google Maps / local pack positions from OpenSEO local SERP, one item per keyword\nconst kws = $('Local keywords').all().map(i => i.json.keyword);\nconst mine = (s) => { s = String(s || '').toLowerCase(); return s.includes(c.site) || c.brand.some(b => s.includes(b)); };\nconst maps = $('OpenSEO local SERP').all().map((i, n) => {\n  const rows = sc(i.json).results || [];\n  const hit = rows.find(x => mine(x.domain) || mine(x.title));\n  return { keyword: kws[n], position: hit ? hit.rank_absolute : null, matched: hit ? hit.title : null,\n           top3: rows.slice(0, 3).map(x => x.title + (x.rating ? ' (' + x.rating.value + '★/' + x.rating.votes_count + ')' : '')),\n           error: errOf(i.json) || (rows.length ? null : 'no rows returned') };\n});\n\n// OpenSEO rank tracker (Google organic, mobile) and AI answer visibility\nconst rk = sc($('OpenSEO rankings').first().json);\nconst cfg = rk.config || null;\nconst rankings = cfg ? {\n  tracker: { domain: cfg.domain, location: cfg.locationName, device: cfg.devices, depth: cfg.serpDepth, schedule: cfg.scheduleInterval, lastCheckedAt: cfg.lastCheckedAt },\n  note: 'position null = not found in the top ' + cfg.serpDepth + ' results the check returned, not proof of a lower rank',\n  totalKeywords: (rk.results || {}).totalCount,\n  keywords: ((rk.results || {}).rows || []).map(r => ({ keyword: r.keyword, position: (r.mobile || {}).position, previousPosition: (r.mobile || {}).previousPosition,\n    rankingUrl: (r.mobile || {}).rankingUrl, serpFeatures: (r.mobile || {}).serpFeatures || [] }))\n} : { error: errOf($('OpenSEO rankings').first().json) || 'No rank tracker found for this OpenSEO project' };\nconst aiD = sc($('OpenSEO AI').first().json).data;\nconst aiVisibility = aiD ? {\n  runId: aiD.runId, run: aiD.run, coverage: aiD.coverage, totalRows: aiD.totalCount,\n  summaries: (aiD.summaries || []).slice(0, 20), rows: (aiD.rows || []).slice(0, 40),\n  note: aiD.runId ? null : 'No AI visibility check has been run yet for this site, so there is no data. Do not infer anything.'\n} : { error: errOf($('OpenSEO AI').first().json) || 'AI visibility results unavailable' };\n\nreturn [{ json: {\n  site: c.site, collectedAt: new Date().toISOString(),\n  siteChecks: d.checks, pagesAudited: gate.pagesCrawled || 0, onpage, pagespeed,\n  rankings: { location: c.location, maps },\n  openseo: { rankings, aiVisibility }\n} }];"
+        "jsCode": "// Compact summary for the agent: facts only, small enough for a cheap model.\nconst c = $('Config').first().json;\nconst d = $('Discover').first().json;\nconst errOf = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 300) : null;\nconst sc = (x) => (x && x.structuredContent) || {};\n\n// On-page: OpenSEO site audit (runs monthly; the latest completed audit is read every time)\nconst gate = $('Audit gate').first().json;\nconst ai = $('OpenSEO audit issues').first().json || {};\nconst iss = sc(ai);\nlet started = null;\ntry { started = sc($('OpenSEO audit start').first().json); } catch (e) { started = null; }\nconst issues = (iss.issues || []).map(i => ({ severity: i.severity, issueType: i.issueType, url: i.url, details: i.details, howToFix: String(i.howToFix || '').slice(0, 220) }));\nconst onpage = {\n  audit: { auditId: gate.auditId, completedAt: gate.completedAt, pagesCrawled: gate.pagesCrawled, sitemapPagesListed: (d.checks.sitemap || {}).pagesListed,\n           startedThisRun: !!(started && !errOf($('OpenSEO audit start').first().json)), plan: gate.reason },\n  issueSummary: iss.summary || [],\n  issues,\n  error: gate.auditId ? errOf(ai) : null,\n  note: gate.auditId ? null : 'No completed OpenSEO audit exists yet (' + gate.reason + '). Say so; do not report on-page findings.'\n};\n\n// PageSpeed (mobile, homepage)\nconst ps = $('PageSpeed').first().json || {};\nconst lh = ps.lighthouseResult || {};\nconst cat = lh.categories || {}, au = lh.audits || {};\nconst pagespeed = lh.categories ? {\n  performance: Math.round((cat.performance || {}).score * 100),\n  lcp: (au['largest-contentful-paint'] || {}).displayValue,\n  cls: (au['cumulative-layout-shift'] || {}).displayValue,\n  tbt: (au['total-blocking-time'] || {}).displayValue\n} : { error: errOf(ps) || 'PageSpeed unavailable' };\n\n// Google Maps / local pack positions from OpenSEO local SERP, one item per keyword\nconst kws = $('Local keywords').all().map(i => i.json.keyword);\nconst mine = (s) => { s = String(s || '').toLowerCase(); return s.includes(c.site) || c.brand.some(b => s.includes(b)); };\nconst maps = $('OpenSEO local SERP').all().map((i, n) => {\n  const rows = sc(i.json).results || [];\n  const hit = rows.find(x => mine(x.domain) || mine(x.title));\n  return { keyword: kws[n], position: hit ? hit.rank_absolute : null, matched: hit ? hit.title : null,\n           top3: rows.slice(0, 3).map(x => x.title + (x.rating ? ' (' + x.rating.value + '★/' + x.rating.votes_count + ')' : '')),\n           error: errOf(i.json) || (rows.length ? null : 'no rows returned') };\n});\n\n// OpenSEO rank tracker (Google organic, mobile) and AI answer visibility\nconst rk = sc($('OpenSEO rankings').first().json);\nconst cfg = rk.config || null;\nconst rankings = cfg ? {\n  tracker: { domain: cfg.domain, location: cfg.locationName, device: cfg.devices, depth: cfg.serpDepth, schedule: cfg.scheduleInterval, lastCheckedAt: cfg.lastCheckedAt },\n  note: 'position null = not found in the top ' + cfg.serpDepth + ' results the check returned, not proof of a lower rank',\n  totalKeywords: (rk.results || {}).totalCount,\n  keywords: ((rk.results || {}).rows || []).map(r => ({ keyword: r.keyword, position: (r.mobile || {}).position, previousPosition: (r.mobile || {}).previousPosition,\n    rankingUrl: (r.mobile || {}).rankingUrl, serpFeatures: (r.mobile || {}).serpFeatures || [] }))\n} : { error: errOf($('OpenSEO rankings').first().json) || 'No rank tracker found for this OpenSEO project' };\nconst aiD = sc($('OpenSEO AI').first().json).data;\nconst aiVisibility = aiD ? {\n  runId: aiD.runId, run: aiD.run, coverage: aiD.coverage, totalRows: aiD.totalCount,\n  summaries: (aiD.summaries || []).slice(0, 20), rows: (aiD.rows || []).slice(0, 40),\n  note: aiD.runId ? null : 'No AI visibility check has been run yet for this site, so there is no data. Do not infer anything.'\n} : { error: errOf($('OpenSEO AI').first().json) || 'AI visibility results unavailable' };\n\n\n// Backlinks (OpenSEO, refreshed monthly; otherwise the copy saved in the last snapshot)\nconst bg = $('Backlinks gate').first().json;\nlet backlinks;\nif (bg.refresh) {\n  try {\n    const ovN = $('OpenSEO backlinks overview').first().json, rwN = $('OpenSEO backlinks rows').first().json;\n    const ov = (((sc(ovN).overview || {}).overview) || {}), sm = ov.summary || {};\n    const rows = ((sc(rwN).backlinks || {}).rows || []).map(r => ({ domainFrom: r.domainFrom, urlFrom: r.urlFrom, urlTo: r.urlTo, anchor: String(r.anchor || '').slice(0, 90),\n      dofollow: r.isDofollow, spamScore: r.spamScore, firstSeen: r.firstSeen, lost: r.isLost })).slice(0, 100);\n    if (!rows.length && !sm.backlinks) throw new Error(errOf(ovN) || errOf(rwN) || 'no backlink data returned');\n    const prev = (bg.cached || {}).rows || null;\n    const key = (r) => r.urlFrom + '>' + r.urlTo;\n    const prevKeys = new Set((prev || []).map(key));\n    const since = (bg.cached || {}).fetchedAt ? new Date(bg.cached.fetchedAt).getTime() : Date.now() - 35 * 86400000;\n    const isNew = (r) => prev ? !prevKeys.has(key(r)) : new Date(String(r.firstSeen).replace(' +00:00', 'Z').replace(' ', 'T')).getTime() > since;\n    backlinks = { fetchedAt: new Date().toISOString(), live: true, comparedWith: (bg.cached || {}).fetchedAt || null,\n      overview: { backlinks: sm.backlinks, referringDomains: sm.referringDomains, brokenBacklinks: sm.brokenBacklinks, backlinksSpamScore: sm.backlinksSpamScore, trends: ov.trends, newLostTrends: ov.newLostTrends },\n      totalRows: ((sc(rwN).backlinks || {}).totalCount), rows };\n  } catch (e) { backlinks = { error: String(e.message || e).slice(0, 200), live: true }; }\n} else backlinks = Object.assign({}, bg.cached, { live: false, note: bg.reason });\nif (backlinks.rows) {\n  const SPAM = 40;\n  const prevRows = (bg.cached && bg.refresh) ? (bg.cached.rows || null) : null;\n  const pk = new Set((prevRows || []).map(r => r.urlFrom + '>' + r.urlTo));\n  const cutoff = Date.now() - 35 * 86400000;\n  const fresh = backlinks.rows.filter(r => prevRows ? !pk.has(r.urlFrom + '>' + r.urlTo) : (new Date(String(r.firstSeen).replace(' +00:00', 'Z').replace(' ', 'T')).getTime() > cutoff));\n  backlinks.newLinks = fresh.slice(0, 30);\n  backlinks.lostLinks = backlinks.rows.filter(r => r.lost).slice(0, 30);\n  const sp = backlinks.rows.filter(r => (r.spamScore || 0) >= SPAM);\n  backlinks.spam = { threshold: SPAM, count: sp.length, ofRows: backlinks.rows.length, domains: [...new Set(sp.map(r => r.domainFrom))].slice(0, 15) };\n}\n\nreturn [{ json: {\n  site: c.site, collectedAt: new Date().toISOString(),\n  siteChecks: d.checks, pagesAudited: gate.pagesCrawled || 0, onpage, pagespeed,\n  rankings: { location: c.location, maps },\n  openseo: { rankings, aiVisibility, backlinks }\n} }];"
       }
     },
     {
@@ -330,7 +330,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2420,
+        3520,
         0
       ]
     },
@@ -352,7 +352,7 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClient",
       "typeVersion": 1.1,
       "position": [
-        2640,
+        3740,
         0
       ],
       "credentials": {
@@ -394,7 +394,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        3080,
+        4180,
         0
       ],
       "credentials": {
@@ -415,9 +415,140 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3300,
+        4400,
         0
       ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select data->'openseo'->'backlinks' as backlinks from seo_snapshots where site = $1 and data->'openseo'->'backlinks'->>'fetchedAt' is not null order by taken_at desc limit 1",
+        "options": {
+          "queryReplacement": "={{ $('Config').first().json.site }}"
+        }
+      },
+      "id": "bl-last",
+      "name": "Last backlinks",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        2420,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "sey62qOLllBpWRpO",
+          "name": "Postgres SEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Backlinks cost ~80 credits per site, so refresh them on the first Monday of the month (Asia/Kolkata)\n// or when no earlier snapshot has them. Otherwise reuse the copy saved in seo_snapshots.\nconst cached = ($json || {}).backlinks || null;\nconst now = Date.now();\nconst ist = new Date(now + 5.5 * 3600 * 1000);\nconst firstMonday = ist.getUTCDay() === 1 && ist.getUTCDate() <= 7;\nconst age = cached && cached.fetchedAt ? now - new Date(cached.fetchedAt).getTime() : Infinity;\nlet refresh = false, reason;\nif (!cached) { refresh = true; reason = 'no saved backlinks yet'; }\nelse if (age < 24 * 3600 * 1000) reason = 'refreshed in the last 24 hours';\nelse if (firstMonday) { refresh = true; reason = 'first Monday of the month'; }\nelse reason = 'not the first Monday; using the saved copy from ' + cached.fetchedAt;\nreturn [{ json: { refresh, reason, cached } }];"
+      },
+      "id": "bl-gate",
+      "name": "Backlinks gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.refresh }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bl-if",
+      "name": "Fetch backlinks?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2860,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://app.openseo.so/mcp",
+        "authentication": "headerAuth",
+        "tool": {
+          "__rl": true,
+          "value": "get_backlinks_overview",
+          "mode": "id"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId, target: $('Config').first().json.site, hideSpam: false }) }}",
+        "options": {}
+      },
+      "id": "os-openseo-backlinks-overview",
+      "name": "OpenSEO backlinks overview",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        3080,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "s2LVmyy23yGTfmiG",
+          "name": "OpenSEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://app.openseo.so/mcp",
+        "authentication": "headerAuth",
+        "tool": {
+          "__rl": true,
+          "value": "get_backlinks_profile",
+          "mode": "id"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId, target: $('Config').first().json.site, mode: 'as_is', pageSize: 100, sortField: 'firstSeen', sortOrder: 'desc', hideSpam: false, filters: { hideLost: false, hideBroken: false } }) }}",
+        "options": {}
+      },
+      "id": "os-openseo-backlinks-rows",
+      "name": "OpenSEO backlinks rows",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        3300,
+        200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "s2LVmyy23yGTfmiG",
+          "name": "OpenSEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     }
   ],
   "connections": {
@@ -553,7 +684,7 @@
       "main": [
         [
           {
-            "node": "Local keywords",
+            "node": "Last backlinks",
             "type": "main",
             "index": 0
           }
@@ -598,6 +729,68 @@
         [
           {
             "node": "Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last backlinks": {
+      "main": [
+        [
+          {
+            "node": "Backlinks gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backlinks gate": {
+      "main": [
+        [
+          {
+            "node": "Fetch backlinks?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch backlinks?": {
+      "main": [
+        [
+          {
+            "node": "OpenSEO backlinks overview",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Local keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenSEO backlinks overview": {
+      "main": [
+        [
+          {
+            "node": "OpenSEO backlinks rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenSEO backlinks rows": {
+      "main": [
+        [
+          {
+            "node": "Local keywords",
             "type": "main",
             "index": 0
           }
