@@ -35,7 +35,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "// One entry per site. Add client sites here (keywords are what local customers search).\nconst SITES = {\n  'dhobico.com': {\n    base: 'https://dhobico.com',\n    location: 'Hyderabad,Telangana,India',\n    brand: ['dhobi & co', 'dhobi and co', 'dhobico'],\n    keywords: [\n      'ironing service in hyderabad',\n      'steam ironing service hyderabad',\n      'doorstep ironing service hyderabad',\n      'ironing service near me',\n      'laundry pickup and delivery hyderabad',\n      'laundry service in hyderabad',\n      'dry cleaning and ironing hyderabad',\n      'clothes ironing at home hyderabad',\n      'press wala near me',\n      'ironing service gachibowli'\n    ],\n    maxPages: 20,\n    openseoProjectId: '9d34bb48-8c2f-48c8-aa42-dcfe4f1faadc'\n  },\n  'ladvalaw.com': {\n    base: 'https://www.ladvalaw.com',\n    location: 'San Francisco,California,United States',\n    brand: ['ladva law', 'ladva'],\n    keywords: [\n      'personal injury lawyer san francisco',\n      'car accident lawyer san francisco',\n      'employment lawyer san francisco',\n      'wrongful termination lawyer san francisco',\n      'uber accident lawyer san francisco','truck accident lawyer san francisco','pedestrian accident lawyer san francisco','workplace discrimination lawyer san francisco','sexual harassment lawyer san francisco','wage and hour lawyer san francisco'\n    ],\n    maxPages: 20,\n    openseoProjectId: '04765c8e-cd37-48bf-bf48-011aafe72a07'\n  }\n};\nconst site = String(($json.query || {}).site || '').toLowerCase().replace(/^www\\./, '');\nconst cfg = SITES[site];\nif (!cfg) throw new Error('Unknown site \"' + site + '\". Known: ' + Object.keys(SITES).join(', '));\nreturn [{ json: { site, ...cfg } }];"
+        "jsCode": "// One entry per site. Add client sites here (keywords are what local customers search).\nconst SITES = {\n  'dhobico.com': {\n    base: 'https://dhobico.com',\n    location: 'Hyderabad,Telangana,India',\n    brand: ['dhobi & co', 'dhobi and co', 'dhobico'],\n    keywords: [\n      'ironing service in hyderabad',\n      'steam ironing service hyderabad',\n      'doorstep ironing service hyderabad',\n      'ironing service near me',\n      'laundry pickup and delivery hyderabad',\n      'laundry service in hyderabad',\n      'dry cleaning and ironing hyderabad',\n      'clothes ironing at home hyderabad',\n      'press wala near me',\n      'ironing service gachibowli'\n    ],\n    auditMaxPages: 50,\n    near: { latitude: 17.385, longitude: 78.4867, zoom: 12 }, // search origin for local SERP: city centre\n    openseoProjectId: '9d34bb48-8c2f-48c8-aa42-dcfe4f1faadc'\n  },\n  'ladvalaw.com': {\n    base: 'https://www.ladvalaw.com',\n    location: 'San Francisco,California,United States',\n    brand: ['ladva law', 'ladva'],\n    keywords: [\n      'personal injury lawyer san francisco',\n      'car accident lawyer san francisco',\n      'employment lawyer san francisco',\n      'wrongful termination lawyer san francisco',\n      'uber accident lawyer san francisco','truck accident lawyer san francisco','pedestrian accident lawyer san francisco','workplace discrimination lawyer san francisco','sexual harassment lawyer san francisco','wage and hour lawyer san francisco'\n    ],\n    auditMaxPages: 50,\n    near: { latitude: 37.7749, longitude: -122.4194, zoom: 12 }, // search origin for local SERP: city centre\n    openseoProjectId: '04765c8e-cd37-48bf-bf48-011aafe72a07'\n  }\n};\nconst site = String(($json.query || {}).site || '').toLowerCase().replace(/^www\\./, '');\nconst cfg = SITES[site];\nif (!cfg) throw new Error('Unknown site \"' + site + '\". Known: ' + Object.keys(SITES).join(', '));\nreturn [{ json: { site, ...cfg } }];"
       }
     },
     {
@@ -52,40 +52,12 @@
       }
     },
     {
-      "id": "n4",
-      "name": "OnPage",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        880,
-        0
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.dataforseo.com/v3/on_page/instant_pages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify([{ url: $json.url, enable_javascript: false, validate_micromarkup: true }]) }}",
-        "options": {
-          "timeout": 120000
-        }
-      },
-      "credentials": {
-        "httpBasicAuth": {
-          "name": "DataForSEO"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
       "id": "n5",
       "name": "PageSpeed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        660,
         0
       ],
       "parameters": {
@@ -110,114 +82,154 @@
       }
     },
     {
-      "id": "n6",
-      "name": "Keywords",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1540,
-        0
-      ],
-      "parameters": {
-        "jsCode": "const c = $('Config').first().json;\nreturn c.keywords.map(k => ({ json: { keyword: k, location: c.location } }));"
-      }
-    },
-    {
-      "id": "n7",
-      "name": "SERP",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1760,
-        0
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.dataforseo.com/v3/serp/google/organic/live/advanced",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify([{ keyword: $json.keyword, location_name: $json.location, language_code: 'en', device: 'mobile', depth: 30 }]) }}",
-        "options": {
-          "timeout": 120000
-        }
-      },
-      "credentials": {
-        "httpBasicAuth": {
-          "name": "DataForSEO"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
-      "id": "n8",
-      "name": "Maps",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        1980,
-        0
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.dataforseo.com/v3/serp/google/maps/live/advanced",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify([{ keyword: $('Keywords').item.json.keyword, location_name: $('Keywords').item.json.location, language_code: 'en', depth: 20 }]) }}",
-        "options": {
-          "timeout": 120000
-        }
-      },
-      "credentials": {
-        "httpBasicAuth": {
-          "name": "DataForSEO"
-        }
-      },
-      "onError": "continueRegularOutput"
-    },
-    {
       "id": "n9",
       "name": "Summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2200,
+        2860,
         0
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Compact summary for the agent: facts only, small enough for a cheap model.\nconst c = $('Config').first().json;\nconst d = $('Discover').first().json;\nconst dfsErr = (r) => (r && r.status_code && r.status_code !== 20000) ? r.status_message : null;\nconst errOf = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 400) : null;\n\n// On-page (DataForSEO instant pages)\nconst op = $('Rejoin').first().json || {};\n// DataForSEO reports some checks as true when they are GOOD; everything else true is a problem.\nconst POSITIVE = new Set(['is_https','has_html_doctype','canonical','seo_friendly_url','is_www','has_micromarkup','has_meta_title','has_meta_description']);\nconst isPositive = (k) => POSITIVE.has(k) || k.startsWith('seo_friendly_url');\nconst pages = (op.tasks || []).map(t => {\n  const it = (((t.result || [])[0] || {}).items || [])[0];\n  if (!it) return { url: (t.data || {}).url, error: t.status_message };\n  const m = it.meta || {};\n  const issues = Object.entries(it.checks || {}).filter(([k, v]) => v === true && !isPositive(k)).map(([k]) => k);\n  return {\n    url: it.url, status: it.status_code, onpageScore: it.onpage_score,\n    title: m.title || null, titleLength: m.title_length || (m.title || '').length,\n    description: m.description || null, descriptionLength: m.description_length || (m.description || '').length,\n    h1: ((m.htags || {}).h1 || []).slice(0, 3), canonical: m.canonical || null,\n    internalLinks: m.internal_links_count, wordCount: (m.content || {}).plain_text_word_count,\n    issues\n  };\n});\n\n// PageSpeed (mobile, homepage)\nconst ps = $('PageSpeed').first().json || {};\nconst lh = ps.lighthouseResult || {};\nconst cat = lh.categories || {}, au = lh.audits || {};\nconst pagespeed = lh.categories ? {\n  performance: Math.round((cat.performance || {}).score * 100),\n  lcp: (au['largest-contentful-paint'] || {}).displayValue,\n  cls: (au['cumulative-layout-shift'] || {}).displayValue,\n  tbt: (au['total-blocking-time'] || {}).displayValue\n} : { error: errOf(ps) || 'PageSpeed unavailable' };\n\n// Rankings: organic + maps, one item per keyword (paired with the Keywords node)\nconst kws = $('Keywords').all().map(i => i.json.keyword);\nconst mine = (s) => { s = String(s || '').toLowerCase(); return s.includes(c.site) || c.brand.some(b => s.includes(b)); };\nconst organic = $('SERP').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []).filter(x => x.type === 'organic');\n  const hit = items.find(x => mine(x.domain) || mine(x.url));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, url: hit ? hit.url : null,\n           top3: items.slice(0, 3).map(x => x.domain), error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\nconst maps = $('Maps').all().map((i, n) => {\n  const r = ((i.json.tasks || [])[0]) || {};\n  const items = ((((r.result || [])[0]) || {}).items || []);\n  const hit = items.find(x => mine(x.domain) || mine(x.title));\n  return { keyword: kws[n], position: hit ? hit.rank_group : null, matched: hit ? hit.title : null,\n           top3: items.slice(0, 3).map(x => x.title + (x.rating ? ' (' + x.rating.value + '★/' + x.rating.votes_count + ')' : '')),\n           error: dfsErr(r) || errOf(i.json) || dfsErr(i.json) };\n});\n\nconst cost = [op, ...$('SERP').all().map(i => i.json), ...$('Maps').all().map(i => i.json)]\n  .reduce((s, x) => s + (Number((x || {}).cost) || 0), 0);\n\n\n// OpenSEO (MCP): tracked rankings and AI answer visibility. Errors are reported, never hidden.\nconst osErr = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 300) : null;\nconst osRk = $('OpenSEO rankings').first().json || {};\nconst osSc = osRk.structuredContent || {};\nconst osCfg = osSc.config || null;\nconst rankings = osCfg ? {\n  tracker: { domain: osCfg.domain, location: osCfg.locationName, device: osCfg.devices, depth: osCfg.serpDepth, schedule: osCfg.scheduleInterval, lastCheckedAt: osCfg.lastCheckedAt },\n  note: 'position null = not found in the top ' + osCfg.serpDepth + ' results the check returned, not proof of a lower rank',\n  totalKeywords: (osSc.results || {}).totalCount,\n  keywords: ((osSc.results || {}).rows || []).map(r => ({\n    keyword: r.keyword, position: (r.mobile || {}).position, previousPosition: (r.mobile || {}).previousPosition,\n    rankingUrl: (r.mobile || {}).rankingUrl, serpFeatures: (r.mobile || {}).serpFeatures || []\n  }))\n} : { error: osErr(osRk) || 'No rank tracker found for this OpenSEO project' };\nconst osAi = $('OpenSEO AI').first().json || {};\nconst aiD = (osAi.structuredContent || {}).data;\nconst aiVisibility = aiD ? {\n  runId: aiD.runId, run: aiD.run, coverage: aiD.coverage, totalRows: aiD.totalCount,\n  summaries: (aiD.summaries || []).slice(0, 20),\n  rows: (aiD.rows || []).slice(0, 40),\n  note: aiD.runId ? null : 'No AI visibility check has been run yet for this site, so there is no data. Do not infer anything.'\n} : { error: osErr(osAi) || 'AI visibility results unavailable' };\nconst openseo = { rankings, aiVisibility };\n\nreturn [{ json: {\n  site: c.site, collectedAt: new Date().toISOString(),\n  siteChecks: d.checks, pagesAudited: pages.length, onpageError: errOf(op) || dfsErr(op), pages, pagespeed,\n  rankings: { location: c.location, organic, maps },\n  dataforseoCostUsd: Math.round(cost * 10000) / 10000,\n  openseo\n} }];"
+        "jsCode": "// Compact summary for the agent: facts only, small enough for a cheap model.\nconst c = $('Config').first().json;\nconst d = $('Discover').first().json;\nconst errOf = (x) => (x && x.error) ? String(x.error.message || x.error.description || JSON.stringify(x.error)).slice(0, 300) : null;\nconst sc = (x) => (x && x.structuredContent) || {};\n\n// On-page: OpenSEO site audit (runs monthly; the latest completed audit is read every time)\nconst gate = $('Audit gate').first().json;\nconst ai = $('OpenSEO audit issues').first().json || {};\nconst iss = sc(ai);\nlet started = null;\ntry { started = sc($('OpenSEO audit start').first().json); } catch (e) { started = null; }\nconst issues = (iss.issues || []).map(i => ({ severity: i.severity, issueType: i.issueType, url: i.url, details: i.details, howToFix: String(i.howToFix || '').slice(0, 220) }));\nconst onpage = {\n  audit: { auditId: gate.auditId, completedAt: gate.completedAt, pagesCrawled: gate.pagesCrawled, sitemapPagesListed: (d.checks.sitemap || {}).pagesListed,\n           startedThisRun: !!(started && !errOf($('OpenSEO audit start').first().json)), plan: gate.reason },\n  issueSummary: iss.summary || [],\n  issues,\n  error: gate.auditId ? errOf(ai) : null,\n  note: gate.auditId ? null : 'No completed OpenSEO audit exists yet (' + gate.reason + '). Say so; do not report on-page findings.'\n};\n\n// PageSpeed (mobile, homepage)\nconst ps = $('PageSpeed').first().json || {};\nconst lh = ps.lighthouseResult || {};\nconst cat = lh.categories || {}, au = lh.audits || {};\nconst pagespeed = lh.categories ? {\n  performance: Math.round((cat.performance || {}).score * 100),\n  lcp: (au['largest-contentful-paint'] || {}).displayValue,\n  cls: (au['cumulative-layout-shift'] || {}).displayValue,\n  tbt: (au['total-blocking-time'] || {}).displayValue\n} : { error: errOf(ps) || 'PageSpeed unavailable' };\n\n// Google Maps / local pack positions from OpenSEO local SERP, one item per keyword\nconst kws = $('Local keywords').all().map(i => i.json.keyword);\nconst mine = (s) => { s = String(s || '').toLowerCase(); return s.includes(c.site) || c.brand.some(b => s.includes(b)); };\nconst maps = $('OpenSEO local SERP').all().map((i, n) => {\n  const rows = sc(i.json).results || [];\n  const hit = rows.find(x => mine(x.domain) || mine(x.title));\n  return { keyword: kws[n], position: hit ? hit.rank_absolute : null, matched: hit ? hit.title : null,\n           top3: rows.slice(0, 3).map(x => x.title + (x.rating ? ' (' + x.rating.value + '★/' + x.rating.votes_count + ')' : '')),\n           error: errOf(i.json) || (rows.length ? null : 'no rows returned') };\n});\n\n// OpenSEO rank tracker (Google organic, mobile) and AI answer visibility\nconst rk = sc($('OpenSEO rankings').first().json);\nconst cfg = rk.config || null;\nconst rankings = cfg ? {\n  tracker: { domain: cfg.domain, location: cfg.locationName, device: cfg.devices, depth: cfg.serpDepth, schedule: cfg.scheduleInterval, lastCheckedAt: cfg.lastCheckedAt },\n  note: 'position null = not found in the top ' + cfg.serpDepth + ' results the check returned, not proof of a lower rank',\n  totalKeywords: (rk.results || {}).totalCount,\n  keywords: ((rk.results || {}).rows || []).map(r => ({ keyword: r.keyword, position: (r.mobile || {}).position, previousPosition: (r.mobile || {}).previousPosition,\n    rankingUrl: (r.mobile || {}).rankingUrl, serpFeatures: (r.mobile || {}).serpFeatures || [] }))\n} : { error: errOf($('OpenSEO rankings').first().json) || 'No rank tracker found for this OpenSEO project' };\nconst aiD = sc($('OpenSEO AI').first().json).data;\nconst aiVisibility = aiD ? {\n  runId: aiD.runId, run: aiD.run, coverage: aiD.coverage, totalRows: aiD.totalCount,\n  summaries: (aiD.summaries || []).slice(0, 20), rows: (aiD.rows || []).slice(0, 40),\n  note: aiD.runId ? null : 'No AI visibility check has been run yet for this site, so there is no data. Do not infer anything.'\n} : { error: errOf($('OpenSEO AI').first().json) || 'AI visibility results unavailable' };\n\nreturn [{ json: {\n  site: c.site, collectedAt: new Date().toISOString(),\n  siteChecks: d.checks, pagesAudited: gate.pagesCrawled || 0, onpage, pagespeed,\n  rankings: { location: c.location, maps },\n  openseo: { rankings, aiVisibility }\n} }];"
       }
     },
     {
-      "id": "n10",
-      "name": "Urls",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "parameters": {
+        "endpointUrl": "https://app.openseo.so/mcp",
+        "authentication": "headerAuth",
+        "tool": {
+          "__rl": true,
+          "value": "list_site_audits",
+          "mode": "id"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId }) }}",
+        "options": {}
+      },
+      "id": "os-openseo-audits",
+      "name": "OpenSEO audits",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
       "position": [
         660,
         0
       ],
-      "parameters": {
-        "jsCode": "// DataForSEO rejects several URLs of one host in a single instant_pages request, so send one request per URL.\nreturn $json.urls.map(url => ({ json: { url } }));"
-      }
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "s2LVmyy23yGTfmiG",
+          "name": "OpenSEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
-      "id": "n11",
-      "name": "Rejoin",
+      "parameters": {
+        "jsCode": "// Decide whether to start an OpenSEO site audit: first Monday of the month (Asia/Kolkata), or no completed audit yet.\n// Never start a second one while one is running or started in the last 24 h.\nconst r = $json || {};\nconst audits = (r.structuredContent || {}).audits || [];\nconst now = Date.now();\nconst ist = new Date(now + 5.5 * 3600 * 1000);\nconst firstMonday = ist.getUTCDay() === 1 && ist.getUTCDate() <= 7;\nconst latest = audits[0];\nconst done = audits.find(a => a.status === 'completed');\nconst age = latest ? now - new Date(latest.startedAt).getTime() : Infinity;\nconst inFlight = !!latest && !['completed', 'failed', 'cancelled'].includes(latest.status) && age < 3 * 3600 * 1000;\nlet start = false, reason;\nif (r.error) reason = 'audit list unavailable';\nelse if (inFlight) reason = 'an audit is already running';\nelse if (age < 24 * 3600 * 1000) reason = 'an audit started in the last 24 hours';\nelse if (!done) { start = true; reason = 'no completed audit yet (baseline)'; }\nelse if (firstMonday) { start = true; reason = 'first Monday of the month'; }\nelse reason = 'not the first Monday; reading the latest completed audit';\nreturn [{ json: { start, reason, auditId: done ? done.id : null, completedAt: done ? done.completedAt : null, pagesCrawled: done ? done.pagesCrawled : null } }];"
+      },
+      "id": "os-audit-gate",
+      "name": "Audit gate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.start }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "os-start-if",
+      "name": "Start audit?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
         1100,
         0
-      ],
+      ]
+    },
+    {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "jsCode": "// Merge the per-URL on-page responses back into one object shaped like a single instant_pages response.\nconst tasks = [];\nlet cost = 0;\nlet error = null;\nfor (const i of $input.all()) {\n  const j = i.json || {};\n  cost += Number(j.cost) || 0;\n  if (j.error && !error) error = j.error;\n  for (const t of (j.tasks || [])) tasks.push(t);\n}\nreturn [{ json: { tasks, cost, error: tasks.length ? null : error } }];"
-      }
+        "endpointUrl": "https://app.openseo.so/mcp",
+        "authentication": "headerAuth",
+        "tool": {
+          "__rl": true,
+          "value": "run_site_audit",
+          "mode": "id"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId, url: $('Config').first().json.base + '/', maxPages: $('Config').first().json.auditMaxPages, runLighthouse: false }) }}",
+        "options": {}
+      },
+      "id": "os-openseo-audit-start",
+      "name": "OpenSEO audit start",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "s2LVmyy23yGTfmiG",
+          "name": "OpenSEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://app.openseo.so/mcp",
+        "authentication": "headerAuth",
+        "tool": {
+          "__rl": true,
+          "value": "get_audit_issues",
+          "mode": "id"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId, auditId: $('Audit gate').first().json.auditId || undefined, limit: 200 }) }}",
+        "options": {}
+      },
+      "id": "os-openseo-audit-issues",
+      "name": "OpenSEO audit issues",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "s2LVmyy23yGTfmiG",
+          "name": "OpenSEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -237,8 +249,8 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClient",
       "typeVersion": 1.1,
       "position": [
-        2200,
-        200
+        1760,
+        0
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -267,8 +279,8 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClient",
       "typeVersion": 1.1,
       "position": [
-        2420,
-        200
+        1980,
+        0
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -297,8 +309,51 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClient",
       "typeVersion": 1.1,
       "position": [
+        2200,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "s2LVmyy23yGTfmiG",
+          "name": "OpenSEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const c = $('Config').first().json;\nreturn c.keywords.map(k => ({ json: { keyword: k } }));"
+      },
+      "id": "os-local-keywords",
+      "name": "Local keywords",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://app.openseo.so/mcp",
+        "authentication": "headerAuth",
+        "tool": {
+          "__rl": true,
+          "value": "get_local_serp_results",
+          "mode": "id"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId, keyword: $json.keyword, near: $('Config').first().json.near, depth: 20, device: 'mobile' }) }}",
+        "options": {}
+      },
+      "id": "os-openseo-local-serp",
+      "name": "OpenSEO local SERP",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
         2640,
-        200
+        0
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -337,18 +392,7 @@
       "main": [
         [
           {
-            "node": "Urls",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "OnPage": {
-      "main": [
-        [
-          {
-            "node": "Rejoin",
+            "node": "PageSpeed",
             "type": "main",
             "index": 0
           }
@@ -359,62 +403,69 @@
       "main": [
         [
           {
-            "node": "Keywords",
+            "node": "OpenSEO audits",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Keywords": {
+    "OpenSEO audits": {
       "main": [
         [
           {
-            "node": "SERP",
+            "node": "Audit gate",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SERP": {
+    "Audit gate": {
       "main": [
         [
           {
-            "node": "Maps",
+            "node": "Start audit?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Maps": {
+    "Start audit?": {
+      "main": [
+        [
+          {
+            "node": "OpenSEO audit start",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenSEO audit issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenSEO audit start": {
+      "main": [
+        [
+          {
+            "node": "OpenSEO audit issues",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenSEO audit issues": {
       "main": [
         [
           {
             "node": "OpenSEO trackers",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Urls": {
-      "main": [
-        [
-          {
-            "node": "OnPage",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Rejoin": {
-      "main": [
-        [
-          {
-            "node": "PageSpeed",
             "type": "main",
             "index": 0
           }
@@ -444,6 +495,28 @@
       ]
     },
     "OpenSEO AI": {
+      "main": [
+        [
+          {
+            "node": "Local keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local keywords": {
+      "main": [
+        [
+          {
+            "node": "OpenSEO local SERP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenSEO local SERP": {
       "main": [
         [
           {

@@ -19,7 +19,7 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 - **Division of labour.** n8n collects data and will do any WordPress write-back. Agents only analyse, draft and prioritise. Agents have no publish access.
 - **Orchestrator.** Paperclip, one organization per site. Each starts with one agent (SEO Lead) and grows into a small team (see Agent team plan).
 - **Agent engine.** OpenCode with models through OpenRouter. Paperclip's OpenCode adapter only supports an OpenRouter AI connection, so every model must be an `openrouter/...` model.
-- **SEO data.** DataForSEO and Google PageSpeed, called from an n8n workflow. OpenSEO is not used.
+- **SEO data.** OpenSEO (hosted, through its MCP endpoint, called from n8n) and Google PageSpeed. DataForSEO was removed on 19 Oct 2026 (see "OpenSEO switch").
 - **Server.** Stay on KVM 1 (1 vCPU, 4 GB RAM). One agent run at a time.
 - **Privacy.** OpenRouter's no-training filter stays on, because client data will pass through.
 
@@ -50,8 +50,8 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 ### n8n workflow "SEO data (agents)"
 - Workflow id `faKFccg43wThoWDE`, active. Source in the repo: `n8n/seo-data-workflow.json`. The runbook explains how to restore it and add sites.
 - Call it from the server only: `GET http://127.0.0.1:5678/webhook/seo-data?site=dhobico.com` with header `X-SEO-Token: $SEO_DATA_TOKEN`. The path is also reachable publicly through the tunnel, so the token check must stay on.
-- It returns sitemap, robots.txt, llms.txt and homepage schema checks; a DataForSEO on-page audit of up to 20 pages; Google organic and Maps rankings for 5 keywords; and mobile PageSpeed. DataForSEO costs about $0.04 per run, and the balance is $1.
-- n8n credentials: "SEO data token" (Header Auth), "DataForSEO" (Basic Auth with the API login and API password), and "PageSpeed Insights API" (Query Auth, Name = `key`, an `AIza…` key from the Google Cloud project `livo-ai-511908`).
+- It returns sitemap, robots.txt, llms.txt and homepage schema checks; the latest OpenSEO site audit (`onpage`); Google organic positions from the OpenSEO rank tracker and Maps positions from OpenSEO local SERP, for 10 keywords; AI answer visibility (`openseo.aiVisibility`, empty until someone runs an AI check); and mobile PageSpeed. A call takes 80 to 100 s and uses roughly 30 OpenSEO credits (20 local SERP calls plus tracker reads).
+- n8n credentials: "SEO data token" (Header Auth), "OpenSEO" (Header Auth, Name `x-api-key`, Value = a personal OpenSEO API key; `Authorization: Bearer` was rejected with 401 on the hosted endpoint) and "PageSpeed Insights API" (Query Auth, Name = `key`, an `AIza…` key from the Google Cloud project `livo-ai-511908`). The DataForSEO credential was deleted.
 - Add a site by adding an entry to `SITES` in the Config node: base URL, location, brand names, 5 local keywords.
 
 ### What the data says about dhobico.com (17 Oct)
@@ -101,6 +101,25 @@ DHO-5 on `openrouter/google/gemini-3.8-flash` finished and closed itself, so the
 - **Missed data gap.** The on-page audit returned errors for 15 of 20 pages ("Invalid Field: 'url' - duplicate crawl host"), so only 5 pages were audited. The report says "all audited pages" and never mentions the gap. Every on-page issue is therefore based on 5 pages. Cause, probably: `OnPage` in the n8n workflow sends 20 URLs for one host in a single `instant_pages` request. Try one URL per request. Not fixed.
 - Minor: a stray `reports/2025-10-17.md` has the wrong year. The sitemap snippet in fix 4 is a guess at the file's format; the real sitemap comes from the SEO plugin.
 
+## OpenSEO switch, 19 Oct 2026
+
+Done:
+- **DataForSEO is gone.** DataForSEO needed a $50 minimum top-up and the $1 balance ran out (HTTP 402). The workflow no longer calls it, and the n8n credential "DataForSEO" was deleted after a successful test run for both sites. Backups of every earlier version: `/root/n8n-backups/` on the server (the last DataForSEO version is `seo-data-2026-10-19-2016-pre-dfs-removal.json`).
+- **New flow in `n8n/seo-data-workflow.json`:** Webhook, Config, Discover (free checks), PageSpeed, then OpenSEO calls through n8n's MCP Client node: `list_site_audits`, `run_site_audit` (only when needed), `get_audit_issues`, `get_rank_tracker` (twice: list trackers, then read one), `get_ai_visibility_results`, and `get_local_serp_results` once per keyword. Response fields: `onpage`, `pagesAudited`, `pagespeed`, `rankings.maps`, `openseo.rankings`, `openseo.aiVisibility`, `siteChecks`.
+- **Audit timing.** A site audit starts on the first Monday of the month (Asia/Kolkata), or when a site has no completed audit yet, and never when one ran or started in the last 24 hours. Every call reads the latest completed audit, so a first-Monday call returns the previous audit and the new one shows from the next call. Audits crawl up to 50 pages (`auditMaxPages` in Config). Dhobi: 38 pages; Ladva: 50 of 196 sitemap URLs.
+- **Maps positions** use `rank_absolute` and match on the domain or the brand name. `Config` holds a search origin per site (`near`: city centre, zoom 12). These are the city centre, not the business address.
+- **Project IDs** are in Config: dhobico.com `9d34bb48-8c2f-48c8-aa42-dcfe4f1faadc`, ladvalaw.com `04765c8e-cd37-48bf-bf48-011aafe72a07`. Each has one weekly rank tracker with 10 keywords (mobile, top 30).
+- **Postgres table `seo_snapshots`** (database `admin`: site, taken_at, source, data jsonb, index on site and taken_at) exists and is empty.
+- **Brief** (`agents/seo-lead.md`) reads `onpage` and the OpenSEO fields and has an "AI answers" section. Both workspace `AGENTS.md` files were replaced; the old versions are `AGENTS.md.bak-20261019b`.
+
+Not done:
+- **Snapshot inserts.** n8n has no Postgres credential, so nothing writes to `seo_snapshots` yet. Create a Postgres credential named "Postgres seo" (host `postgres`, port 5432, database `admin`, user `admin`, password from `POSTGRES_PASSWORD` in `/opt/txn-agn/.env`; a limited role would be safer), then add a Postgres Insert node after Summary (site, `source` = `openseo`, data = the Summary JSON).
+- **Paperclip audit tasks with the new brief.** Not run. The next Monday 09:00 routine will be the first real test. Check that the report uses `onpage`, `rankings.maps` and the "No AI visibility data yet" line, and that it states the audit date.
+- **AI answer visibility is empty.** Nobody has configured an AI visibility tracker or run a check in OpenSEO. Running a check spends credits (use `estimate_ai_visibility_cost` first).
+- **Backlinks and keyword ideas** from the plan are not in the workflow yet.
+- **Ladva Law's Maps data is empty** for all 10 keywords. That is plausible for a law firm, but check one by hand in Google Maps before the SEO Lead tells a client so.
+- The scratch workflow "tmp OpenSEO tool list" was deleted after use.
+
 ## Agent team plan
 
 Each site's organization grows in this order, one step at a time, and only after the previous step works:
@@ -109,7 +128,7 @@ Each site's organization grows in this order, one step at a time, and only after
 |---|---|---|
 | SEO Lead (Paperclip CEO, so it manages the others) | Now | Reads the weekly data, sets priorities, creates tasks for the others, reviews their work before it goes to Hassan |
 | Writer | After the first good audit | Meta descriptions, FAQ answers and schema, service-area pages, blog posts, in each brand's voice |
-| Researcher | When content production starts | Keyword gaps, questions people ask AI assistants, competitor pages. Needs DataForSEO keyword endpoints added to the n8n workflow |
+| Researcher | When content production starts | Keyword gaps, questions people ask AI assistants, competitor pages. Needs OpenSEO keyword tools (`research_keywords`, `get_keyword_metrics`) added to the n8n workflow |
 | Publisher | Never an agent | WordPress write-back is an n8n workflow that runs only after Hassan approves |
 
 n8n already does the data gathering, so there is no separate data-collection agent. Runs queue one at a time on the 1-vCPU server; cap concurrent runs at 1 per agent. Copy the proven team to the 5 client sites only after it works on Dhobi & Co.
@@ -176,7 +195,7 @@ Your working directory is /home/agent/work/dhobico. Read AGENTS.md there and fol
 - `scripts/finish-setup.sh` exists only on the server. Check it for secrets before committing.
 - Paperclip's health check warns "No recent database backup". Its own backup feature is off; the nightly `pg_dumpall` covers the database. Silence the warning or document it.
 - Connect Claude to n8n through n8n's built-in MCP server (Settings → Instance-level MCP). From Claude Code on the server use `http://127.0.0.1:5678/mcp-server/http` with the API-key token (keep it in Bitwarden). Expose only the SEO workflows, never the client lead workflows. The claude.ai connector can't reach n8n while it is Tailscale-only; publishing `/mcp-server/` through the tunnel is a later decision for Hassan.
-- Decide the DataForSEO spend cap. OpenRouter's key limit is $10 a month.
+- OpenSEO credit use: about 9,700 credits at the start; the first full day cost about 60 for two weekly runs plus one 50-page crawl. Watch `whoami` creditsRemaining. OpenRouter's key limit is $10 a month.
 - Decide who approves agent-proposed changes for each client site.
 
 ## Gotchas learned the hard way
@@ -189,7 +208,7 @@ Your working directory is /home/agent/work/dhobico. Read AGENTS.md there and fol
 - npm 11 blocks install scripts by default. OpenCode needs `--allow-scripts=opencode-ai`.
 - systemd user services don't see `~/.local/bin`, so it has to be on PATH in `paperclip.env`.
 - The OpenCode adapter is hidden in Paperclip by default (Settings → Adapters → power icon).
-- n8n credential pitfalls: DataForSEO needs the API password, not the account password. A Query Auth credential's Name must be exactly `key`. A key without a Name sends requests anonymously and hits Google's shared quota.
+- n8n credential pitfalls: The hosted OpenSEO endpoint accepts only `x-api-key`, and a header Name with a space is rejected by n8n. A Query Auth credential's Name must be exactly `key`. A key without a Name sends requests anonymously and hits Google's shared quota.
 - The `agent` user was first created with uid 1000, the same uid the n8n container runs as, which would have let agents stop n8n or read its files. It was recreated as uid 2000. Keep the two different.
 
 ## Start Claude Code on Hassan's desktop

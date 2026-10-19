@@ -1,6 +1,13 @@
 # Plan: OpenSEO as the data source (Option B)
 
-Status: draft for Hassan's review. Nothing here is deployed yet.
+Status, 19 Oct 2026: partly built. Decisions and results are in `docs/HANDOFF.md` ("OpenSEO switch").
+
+What changed from this plan when we built it:
+- n8n calls OpenSEO through its **MCP endpoint** (n8n MCP Client node), not a REST API. Auth is a personal API key sent as `x-api-key`.
+- **DataForSEO was removed completely** (not kept as a fallback), because it needed a $50 minimum top-up. On-page checks now come from OpenSEO site audits (first Monday of each month, or when none exists), Maps positions from `get_local_serp_results`, and Google positions from the rank tracker.
+- Tracked **10 keywords** per site, not 20.
+- **Not built yet:** backlinks, keyword research, a populated AI visibility tracker, Developer agent, `check-copy.sh`. The `seo_snapshots` table exists but nothing writes to it yet (needs an n8n Postgres credential).
+- Measured cost: about 60 OpenSEO credits for two full runs plus one 50-page crawl.
 
 ## The decision
 
@@ -69,5 +76,5 @@ The hard stop in Paperclip stays at $1 per site per month for agent spend; OpenS
 
 ## Open questions
 
-- Does OpenSEO's AI prompt tracking cover Perplexity and Google AI Overviews, or only ChatGPT?
-- Can the OpenSEO token be limited to read-only access?
+- Does OpenSEO's AI prompt tracking cover Perplexity and Google AI Overviews, or only ChatGPT? (Answered: engines are chatgpt, gemini, google_ai_overview, claude and perplexity. No tracker is set up yet.)
+- Can the OpenSEO token be limited to read-only access? (Open. Keys are personal and act as the user, per the OpenSEO docs, so treat the key like a password.)

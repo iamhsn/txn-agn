@@ -110,14 +110,20 @@ Never use `pkill -u` or `killall` on the server to stop agent processes; use `pa
 ## SEO data workflow (n8n → agents)
 
 `n8n/seo-data-workflow.json` is the "SEO data (agents)" workflow. It is the agents' only source of SEO facts:
-sitemap/robots/llms.txt/homepage schema checks (free), DataForSEO on-page checks for up to 20 pages, Google
-organic + Maps rankings for each site's keywords, and mobile PageSpeed. About $0.04 of DataForSEO per site per run.
+sitemap/robots/llms.txt/homepage schema checks (free), mobile PageSpeed, and OpenSEO data through its MCP endpoint
+(`https://app.openseo.so/mcp`): the latest site audit, tracked Google rankings, local (Maps) positions and AI answer visibility.
+A site audit starts on the first Monday of the month, or when a site has none.
 
 - Called by agents from the server only: `GET http://127.0.0.1:5678/webhook/seo-data?site=<domain>` with header
   `X-SEO-Token: $SEO_DATA_TOKEN` (the token lives in agent's `paperclip.env` and in the n8n credential "SEO data token").
   The webhook path is also reachable through the tunnel, so the header check must stay on.
-- n8n credentials it needs: "SEO data token" (Header Auth), "DataForSEO" (Basic Auth, API login + API password),
-  "GCP API Key" (Query Auth, Name = `key`, Value = an `AIza…` key from the livo-ai-511908 project with PageSpeed
-  Insights API enabled).
-- Restore: n8n → Workflows → Import from file, then pick the three credentials on the nodes and activate.
-- Add a site: add an entry to `SITES` in the Config node (base URL, location, brand names, 5 local keywords).
+- n8n credentials it needs: "SEO data token" (Header Auth), "OpenSEO" (Header Auth, Name `x-api-key`, Value = a personal
+  OpenSEO API key from Settings, API keys), and "PageSpeed Insights API" (Query Auth, Name = `key`, an `AIza…` key from the
+  livo-ai-511908 project with PageSpeed Insights API enabled).
+- Restore: copy the JSON to the server, then `n8n import:workflow` with `"id": "faKFccg43wThoWDE"` and `"active": true` set in a copy
+  of the file (the repo file has no id and would create a duplicate), `n8n update:workflow --id=faKFccg43wThoWDE --active=true`,
+  and restart n8n. Right after a restart the webhook answers 404 for a few seconds.
+- Add a site: create the project and a rank tracker in OpenSEO, then add an entry to `SITES` in the Config node (base URL,
+  location, brand names, 10 keywords, `near` coordinates, `openseoProjectId`).
+- To test the OpenSEO connection without printing the key, run a scratch workflow with `n8n execute` and
+  `-e N8N_RUNNERS_BROKER_PORT=5690 -e N8N_PORT=5691` so it doesn't clash with the running n8n.
