@@ -363,6 +363,61 @@
       },
       "onError": "continueRegularOutput",
       "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "name",
+          "value": "seo_snapshots"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "site": "={{ $json.site }}",
+            "source": "openseo",
+            "data": "={{ JSON.stringify($json) }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "snap-insert",
+      "name": "Save snapshot",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        3080,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "sey62qOLllBpWRpO",
+          "name": "Postgres SEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return the Summary to the caller, whatever the snapshot insert did.\nreturn [{ json: $('Summary').first().json }];"
+      },
+      "id": "snap-output",
+      "name": "Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3300,
+        0
+      ]
     }
   ],
   "connections": {
@@ -521,6 +576,28 @@
         [
           {
             "node": "Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summary": {
+      "main": [
+        [
+          {
+            "node": "Save snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save snapshot": {
+      "main": [
+        [
+          {
+            "node": "Output",
             "type": "main",
             "index": 0
           }
