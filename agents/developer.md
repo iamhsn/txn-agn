@@ -25,6 +25,7 @@ The task names one change: the page or post, what to change, and the exact final
 2. Make the change as a draft:
    - **New page or post:** `POST $WP/posts` (or `pages`) with `"status":"draft"`.
    - **Change to existing content:** `POST $WP/pages/<id>/autosaves` (or `posts/<id>/autosaves`) with the new title, content or excerpt. This leaves the live page untouched; Hassan applies it in the editor. Never send `PUT` or `POST` to the page itself, because that changes the live page.
+   - **Page builders:** if the site uses Oxygen or Breakdance, an existing page's visible content is builder data, not the `content` field. Change only the title or excerpt of an existing page; for body changes block with "page is built with a page builder: needs a manual edit".
    - **SEO plugin fields** (meta description, SEO title): only if the task names the exact meta key. Otherwise block with "needs the SEO plugin field name".
 3. Check the result with a `GET`: the status must still be `draft` (new content) or unchanged (autosave). If a post shows `publish`, `future` or `private` because of your change, say so loudly in the comment.
 4. Comment on the task and set it to review, in one command:

@@ -143,6 +143,22 @@ Blocked or open:
 - **Dhobi SEO Lead budget:** $0.52 of $0.75 is already spent this month (the early DHO-5 run was $0.39). It will stop at $0.75; raise it if needed.
 - The Writer on flash-lite is untested on a law-firm draft. Test one before the Ladva Writer handles anything real.
 
+## Four-site run, 20 Oct 2026
+
+**Setup done.** `acre.realty` and `acgunited.com` are in the n8n workflow (`SITES` entries built from their OpenSEO projects: tracker keywords, Houston location, competitors from the project context). ACG's Maps check covers two keywords only (`localKeywords`), because it is a national B2B site. Every site now returns a `competitors` list. Both new sites return data (rankings, Maps, backlinks); their first OpenSEO site audit started on 20 Oct, so `onpage` says "no completed audit yet" until it finishes. A first import of the workflow created a duplicate (`SMH1BTz2fas7nOWJ`); it was deleted and the real one (`faKFccg43wThoWDE`) re-imported. Repo JSON carries no `id`: add `"id":"faKFccg43wThoWDE","active":true` to the copy before `n8n import:workflow`.
+
+**Paperclip.** New organization "ACRE Realty" (SEO Lead, Writer, Developer, $1.50 stop) and, in "ACG United", a new OpenCode SEO Lead plus Writer and Developer (the original Claude SEO Lead is paused). Weekly (Mon 09:00) and monthly (Mon 10:00) routines created for both. Workspaces `/home/agent/work/acre` and `/home/agent/work/acgunited` rendered. WordPress app passwords for dhobico.com, acre.realty and acgunited.com are in `paperclip.env` (editor role); all three pass `GET /users/me`. Ladva has none.
+
+**Blocked: ACRE and ACG cannot run.** Their tasks stop at once with "selected AI account is unavailable", and any update to an agent fails with `ai_connection_default_missing`. Hassan must open each organization in the Paperclip UI, connect the OpenRouter account and choose it as his personal default. Then re-run `ACR-1` and `ACG-2`. The ACG SEO Lead, ACRE SEO Lead and ACG SEO Lead 2 carry `dangerouslySkipPermissions` like Dhobi's; the new Writers and Developers do not. Agents in ACG are named "SEO Lead 2", "Writer 2", "Developer 2" (rename in the UI).
+
+**Reports, Dhobi and Ladva.** First run and a rerun with the new Competitors section. Everything checked against the data file matched (PageSpeed, backlink totals, new and spam counts, issue counts, audit date, schema types, organic positions, Ladva Maps). Wrong claims: in the rerun, Dhobi's Competitors section gave our Maps position as #10, #9 and #2 where the data says 11, 8 and 4 (the agent worked it out from `top3`); the brief now says to quote `position` exactly. Not re-run. The first run lacked competitors and AI-answer names; AI answers still read "No AI visibility data yet" because no AI tracker exists.
+
+**Delegation.** Dhobi: one Writer draft (title for the Dairy Farm page, 57 characters, check-copy PASS) and one Developer task (DHO-21), which could not apply it. Two reasons: the page is a `dc_location` custom post type, which the Developer cannot reach through `pages` or `posts`, and dhobico.com has no SEO plugin (Oxygen/Breakdance only), so there is no meta key. Ladva: nothing delegated (no facts or WP credentials). **No WordPress drafts were created.** Other fixes need Hassan or the client: LocalBusiness and FAQPage schema (business details and FAQ text are not in the data), the thank-you page noindex, and the disavow decision.
+
+**Cost (OpenRouter usage delta).** First audit pass, two sites running: $0.023. Rerun, two reports: $0.057. Delegation, two tasks including the Writer and Developer: $0.095. About $0.175 in total; no single run came near $0.20.
+
+**Next.** Connect the AI account in both new orgs and re-run their audits; decide how the Developer should handle `dc_location` content and SEO titles (add a REST route or a plugin); add an AI visibility tracker for the four projects; add Ladva WordPress credentials.
+
 ## Agent team plan
 
 Each site's organization grows in this order, one step at a time, and only after the previous step works:
