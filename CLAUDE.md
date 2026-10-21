@@ -16,6 +16,7 @@ Read `docs/HANDOFF.md` (current state, next steps) and `docs/RUNBOOK.md` (how th
 - Never commit `.env` files, keys or tokens. Never print secret values; compare or show lengths instead.
 
 ## Rules
+- Never build custom WordPress plugins, must-use plugins or code snippets for client or own sites. They break and don't scale. Use existing, maintained plugins and settings only, and ask Hassan before installing any plugin.
 - Hassan is not a terminal user. Say in one line what each command does before running it.
 - Ask before touching the client lead workflows in n8n, the Cloudflare tunnel or the `txn-lead-buffer` Worker.
 - Keep the `agent` user at uid 2000, without sudo or docker. Never use `pkill -u` or `killall` on the server.
