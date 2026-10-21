@@ -1,6 +1,6 @@
 # txn-agn handoff: SEO/AEO agents (for Claude Code)
 
-As of 18 Oct 2026, 17:35 IST. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
+As of 21 Oct 2026. Owner: Hassan (h@livo.digital). No secrets in this file. Keys live in Bitwarden, `/opt/txn-agn/.env` and `/home/agent/.config/paperclip.env`.
 
 ## Read this first
 
@@ -174,9 +174,11 @@ Blocked or open:
 
 **Status check from the cloud session, 21 Oct.** OpenSEO projects: dhobico.com `9d34bb48-…`, ladvalaw.com `04765c8e-…`, acre.realty `572bf04b-…`, acgunited.com `0f034fbb-…`. Each has a weekly rank tracker (10 keywords, Mon 06:00 IST, next 26 Oct), a business overview and 6 to 8 competitors set by Hassan (Ladva also gjel.com and bestattorney.com). 19 Oct AI results: Ladva cited once (Google AI Overview, "Uber or Lyft accident attorney San Francisco"); ACG 14 of 15 answers collected. ACRE re-run id `b4aa32d7-8560-4529-b448-977d7c4d2204`.
 
+**Read-only check of the live sites, 21 Oct (Claude Code, desktop).** The Agent Connector exposes `wp-cli`, `shell-exec`, `php-eval` and file write abilities (full code execution, so never give it to an agent). Using only read commands: The SEO Framework is active on dhobico.com, acre.realty and acgunited.com (so the earlier "no SEO plugin" finding for DHO-21 and ACG-9 was wrong; the real blocker is that the meta keys are not in REST). `_genesis_title` / `_genesis_description` exist and are readable by `wp-cli` (Dhobi Dairy Farm page and ACG home page have values; ACRE home has none and uses auto text). Universal Abilities exposes no SEO abilities. Custom post types are all REST-visible: `dc_location` (Dhobi), `listing-detail` and `terms-and-condition` (ACRE), `acg_solution`, `acg_network`, `acg_partner_type`, `acg_testimonial` (ACG). Decision (Hassan): Developer proposes only for custom post types, their custom fields and SEO fields; `agents/developer.md` updated, workspaces not yet re-rendered. Option left open: an approved write-back through `wp-cli` as an n8n step, only after Hassan approves.
+
 ## Next steps (21 Oct onwards)
 
-1. **Unblock the Developer** (zero WordPress drafts so far). SEO titles and meta stay proposals (no custom plugins). Check whether the installed Agent Connector / Universal Abilities plugins can write The SEO Framework fields; if so, plan it and ask Hassan. Allow the Developer to target the custom post types (`dc_location` on Dhobi, ACRE's listing types). Ask Hassan before installing anything on client sites.
+1. **Unblock the Developer** (zero WordPress drafts so far). Done on paper: brief updated, proposals only for SEO fields and custom post types. Still to do: re-render the four workspaces from a clean checkout after the push, and run one Developer task per kind to test. Ask Hassan before installing anything on client sites.
 2. **AI data in reports.** Re-run one audit per site and check the AI answers section names competitors.
 3. **Ladva.** Confirm the CMS; if WordPress, create the application password and add `WP_LADVALAW_*` to `paperclip.env`.
 4. **Facts the agents lack.** Collect from Hassan, per site: business address, phone and hours (LocalBusiness schema), FAQ text (FAQPage), image descriptions. Store as `facts.md` in each workspace and point the brief at it.

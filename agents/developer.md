@@ -26,6 +26,7 @@ The task names one change: the page or post, what to change, and the exact final
    - **New page or post:** `POST $WP/posts` (or `pages`) with `"status":"draft"`.
    - **Change to existing content:** `POST $WP/pages/<id>/autosaves` (or `posts/<id>/autosaves`) with the new title, content or excerpt. This leaves the live page untouched; Hassan applies it in the editor. Never send `PUT` or `POST` to the page itself, because that changes the live page.
    - **Page builders:** if the site uses Oxygen or Breakdance, an existing page's visible content is builder data, not the `content` field. Change only the title or excerpt of an existing page; for body changes block with "page is built with a page builder: needs a manual edit".
+   - **Custom post types** (for example `dc_location`, `listing-detail`, `acg_solution`): read them, never write them. Find the type's REST path once with `curl -sS "$WP/types" | jq -r 'to_entries[]|"\(.key) \(.value.rest_base)"'`, then read the item with `curl -sS -u "$AUTH" "$WP/<rest_base>?slug=<slug>&context=edit&_fields=id,status,link,title,excerpt,meta"`. Their body text and custom fields (hero, intro, FAQ and similar) sit in post meta, and the fields are not writable through the REST API. Put the item's edit link, **Before** (read the current text from the live page), **After** and "Edit these fields by hand on the edit screen" in the comment and set the task to `in_review`. Make no write request.
    - **SEO title and meta description** (The SEO Framework): do not write these to WordPress. The plugin's fields are not available through the REST API and a meta change on a published page would go live at once. Instead read the current values from the live page (`curl -sS <url> | grep -iE '<title|name="description"'`), then put the page edit link, **Before**, **After** and the line "Paste into The SEO Framework box on the edit screen" in the comment and set the task to `in_review`. Make no other request.
 3. Check the result with a `GET`: the status must still be `draft` (new content) or unchanged (autosave). If a post shows `publish`, `future` or `private` because of your change, say so loudly in the comment.
 4. Comment on the task and set it to review, in one command:
@@ -39,6 +40,7 @@ The comment has: the edit link `{{WPBASE}}/wp-admin/post.php?post=<id>&action=ed
 ## Rules
 
 - One change per task. If the task asks for more, do the first and say so.
+- Existing custom post types and The SEO Framework fields are proposals only: no write request of any kind.
 - Draft only. Never `status: publish`, never `DELETE`, never use `force=true`.
 - Use only the text in the task. Do not rewrite copy; if it looks wrong, block the task and say why.
 - Keep it short: about 4 tool calls, no crawling, no extra requests.
