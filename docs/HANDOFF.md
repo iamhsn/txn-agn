@@ -165,6 +165,24 @@ Blocked or open:
 
 **Next.** Decide how meta descriptions and SEO titles get written: install an SEO plugin (Yoast, Rank Math or SEOPress) on the four sites and expose its fields, or give the Developer a small REST route. Until then the Developer can only draft new posts. Also: add an AI visibility tracker for the four projects; Ladva WordPress credentials; give the SEO Leads the facts they lack (business details for LocalBusiness schema, FAQ text, image descriptions). Re-render workspaces after any `agents/*.md` change, from a clean checkout of the repo.
 
+## Status check, 21 Oct 2026 (from the cloud session; Paperclip and OpenRouter not reachable from there)
+
+**OpenSEO.** 8,399 credits left (10,000 on 19 Oct). Four projects: dhobico.com `9d34bb48-…`, ladvalaw.com `04765c8e-…`, acre.realty `572bf04b-…`, acgunited.com `0f034fbb-…`. Each has a weekly rank tracker (10 keywords, mobile, top 30, Mon 06:00 IST, next 26 Oct), a weekly AI visibility tracker (5 prompts; ChatGPT, Gemini, Google AI Overviews; next 27 Oct), a business overview and 6 to 8 competitors set by Hassan. Ladva also has gjel.com and bestattorney.com (top San Francisco PI results).
+
+**Why reports say "No AI visibility data yet".** Trackers exist, but `get_ai_visibility_results` with `runId` null reads only baseline or scheduled runs and skips manual checks. All checks so far were manual (19 Oct: Dhobi 15/15, Ladva 15/15, ACG 14/15, ACRE 0/15 failed; ACRE re-run started 21 Oct, run `b4aa32d7-8560-4529-b448-977d7c4d2204`). Fix in n8n: read `recentRuns[0].id` from `get_ai_visibility_tracker` and pass it as `runId`, or wait for the scheduled runs on 27 Oct. 19 Oct results: Dhobi mentioned in 0 of 10 answers; Ladva cited once (Google AI Overview, "Uber or Lyft accident attorney San Francisco").
+
+**Correction to "none of the four sites has an SEO plugin".** acre.realty and acgunited.com run The SEO Framework (seen in the WordPress site info on 20 Oct). Its title and description are post meta `_genesis_title` and `_genesis_description`. They are not exposed over REST by default; a 10-line mu-plugin with `register_post_meta(..., ['show_in_rest' => true, 'single' => true, 'type' => 'string', 'auth_callback' => fn() => current_user_can('edit_posts')])` for `page`, `post` and the custom post types would let the Developer write them as drafts. Dhobi (Oxygen only) and Ladva (unconfirmed CMS) need a decision: install The SEO Framework too, so all four sites work the same way.
+
+## Next steps (21 Oct onwards)
+
+1. **Unblock the Developer** (biggest gap: zero WordPress drafts so far). Install The SEO Framework on dhobico.com, add the REST mu-plugin on all WordPress sites, and allow the Developer to target the custom post types (`dc_location` on Dhobi, ACRE's listing types). Ask Hassan before installing plugins on client sites.
+2. **AI data in reports.** Apply the `runId` fix above, re-run one audit per site and check the AI answers section names competitors.
+3. **Ladva.** Confirm the CMS; if WordPress, create the application password and add `WP_LADVALAW_*` to `paperclip.env`.
+4. **Facts the agents lack.** Collect from Hassan, per site: business address, phone and hours (LocalBusiness schema), FAQ text (FAQPage), and image descriptions. Store them in each workspace as `facts.md` and point the brief at it.
+5. **Check the first scheduled runs** on Mon 26 Oct (09:00 IST): all 4 routines fired, cost per run under $0.02, and OpenSEO credits used.
+6. **Refresh the "Current state" section at the top of this file.** It still describes 18 Oct.
+7. **Budgets.** Dhobi's SEO Lead had $0.52 of $0.75 spent by 19 Oct; check and raise if the Monday run would stop.
+
 ## Agent team plan
 
 Each site's organization grows in this order, one step at a time, and only after the previous step works:
