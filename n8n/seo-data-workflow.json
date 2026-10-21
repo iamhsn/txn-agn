@@ -301,7 +301,7 @@
           "mode": "id"
         },
         "inputMode": "json",
-        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId }) }}",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId, runId: ((((($('OpenSEO AI tracker').first().json.structuredContent || {}).data || {}).recentRuns || []).find(r => ['completed', 'partial'].includes(r.status))) || {}).id, limit: 50 }) }}",
         "options": {}
       },
       "id": "os-openseo-ai",
@@ -549,6 +549,36 @@
       },
       "onError": "continueRegularOutput",
       "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://app.openseo.so/mcp",
+        "authentication": "headerAuth",
+        "tool": {
+          "__rl": true,
+          "value": "get_ai_visibility_tracker",
+          "mode": "id"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ projectId: $('Config').first().json.openseoProjectId }) }}",
+        "options": {}
+      },
+      "id": "os-ai-tracker",
+      "name": "OpenSEO AI tracker",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "s2LVmyy23yGTfmiG",
+          "name": "OpenSEO"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     }
   ],
   "connections": {
@@ -673,7 +703,7 @@
       "main": [
         [
           {
-            "node": "OpenSEO AI",
+            "node": "OpenSEO AI tracker",
             "type": "main",
             "index": 0
           }
@@ -791,6 +821,17 @@
         [
           {
             "node": "Local keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenSEO AI tracker": {
+      "main": [
+        [
+          {
+            "node": "OpenSEO AI",
             "type": "main",
             "index": 0
           }
