@@ -27,7 +27,7 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 
 ### Server
 - Hostinger VPS 1305371, Ubuntu 26.04, IP 72.61.249.201. SSH and web UIs only over Tailscale (host `txn-agn`, `txn-agn.tailc354f1.ts.net`). ufw blocks everything else. 4 GB swap. About 39 GB disk free.
-- Docker Compose in `/opt/txn-agn`: Postgres 16, n8n 2.44.3, cloudflared. Server copy matches the repo at commit `4a22e8f`.
+- Docker Compose in `/opt/txn-agn`: Postgres 16, n8n 2.44.3, cloudflared. Server copy matches the repo (check with `git log -1` on both).
 - Timers: health check every 5 min (self-heal, Healthchecks.io, Telegram alerts), nightly backup at 02:30 IST (`pg_dumpall` to the server for 7 days and R2 for 30 days, which includes Paperclip's database), weekly cleanup.
 - Private URLs, via `tailscale serve`: n8n editor at `https://txn-agn.tailc354f1.ts.net/`, Paperclip at `https://txn-agn.tailc354f1.ts.net:8443/`.
 
@@ -40,21 +40,22 @@ AI agents do SEO and AEO work for Hassan's own sites and client sites from one H
 - `scripts/setup-agent.sh` rebuilds all of this on a fresh server. It doesn't set `disableSignUp`, because sign-up must stay open until the admin claims the account.
 - Manage it as agent: `sudo -iu agent env XDG_RUNTIME_DIR=/run/user/2000 bash`, then `paperclipai service status|logs|restart` or `paperclipai doctor`.
 
-### Dhobi & Co pilot
-- Organization "Dhobi & Co." (task prefix DHO). Agent **SEO Lead**: OpenCode adapter, working directory `/home/agent/work/dhobico`, timeout 1200 s, timed heartbeat off.
-- The agent's AI connection is Hassan's OpenRouter key, stored encrypted in Paperclip. Its model is being switched to `openrouter/google/gemini-3.8-flash` (see Model setup).
-- Workspace `/home/agent/work/dhobico`: `AGENTS.md` (the brief: fetch data first, never crawl, never state anything not in the data, write `reports/YYYY-MM-DD.md`, comment the summary and top 5 fixes, mark the task done), plus `data/` and `reports/`.
-- Tasks DHO-1 to DHO-4 are all cancelled. No runs are queued.
-- A second organization, "Livo", holds an unused Claude agent from an early attempt. Leave it. A third, "ACG United" (prefix ACG, one SEO Lead agent, one onboarding task), also exists and isn't described anywhere else. Ask Hassan what it is for.
+### Organizations and agents (21 Oct)
+- Four client organizations, one per site, each with SEO Lead, Writer and Developer: Dhobi & Co. (DHO, dhobico.com), Ladva Law Firm (LAD, ladvalaw.com), ACRE Realty (ACR, acre.realty), ACG United (ACG, acgunited.com). Workspaces `/home/agent/work/{dhobico,ladvalaw,acre,acgunited}`, rendered by `scripts/site-workspace.sh`. Also present and unused: "Livo" (an early Claude agent; leave it).
+- SEO Lead and Developer run `openrouter/anthropic/claude-haiku-5.5`; Writer runs `openrouter/google/gemini-3.5-flash-lite`. Budgets $0.75, $0.50 and $0.25 a month; each org stops at $1.50. Heartbeat off, one concurrent run. Spend on 21 Oct: Dhobi 65c, Ladva 16c, ACRE 2c, ACG 7c.
+- ACRE and ACG agents use the organization-shared OpenRouter connection (`aiConnection` mode `shared`), because that connection is not owned by Hassan and so cannot be his personal default. ACG also keeps an old paused Claude "SEO Lead"; the live one is "SEO Lead 2" (same for Writer 2 and Developer 2). A failed run leaves an agent in `error`; `paperclipai agent resume <id>` clears it.
+- Routines in every org (Asia/Kolkata): weekly audit Mon 09:00, monthly Mon 10:00 (acts on the first Monday). First fire Mon 26 Oct. The n8n monthly pull runs Mon 07:00 on the first Monday. Dhobi and Ladva also hold an older paused weekly routine.
+- WordPress: application passwords for dhobico.com, acre.realty and acgunited.com are in `paperclip.env` as `WP_<SITE>_USER` and `WP_<SITE>_APP_PASSWORD` (editor role, all pass `users/me`). Ladva has none. The SEO Framework fields are not reachable through the REST API and custom plugins are not allowed (see CLAUDE.md), so the Developer only proposes SEO title and meta text; it can draft new posts and change a page's title or excerpt.
+- AI visibility: all four projects have a weekly tracker (ChatGPT, Gemini, Google AI Overviews). Reports now include AI answers and name competitors (checked on ACRE and ACG, 21 Oct). Add Stance Marketing as a competitor for ACG: it was named in an answer and is not tracked.
 
 ### n8n workflow "SEO data (agents)"
 - Workflow id `faKFccg43wThoWDE`, active. Source in the repo: `n8n/seo-data-workflow.json`. The runbook explains how to restore it and add sites.
 - Call it from the server only: `GET http://127.0.0.1:5678/webhook/seo-data?site=dhobico.com` with header `X-SEO-Token: $SEO_DATA_TOKEN`. The path is also reachable publicly through the tunnel, so the token check must stay on.
-- It returns sitemap, robots.txt, llms.txt and homepage schema checks; the latest OpenSEO site audit (`onpage`); Google organic positions from the OpenSEO rank tracker and Maps positions from OpenSEO local SERP, for 10 keywords; AI answer visibility (`openseo.aiVisibility`, empty until someone runs an AI check); and mobile PageSpeed. A call takes 80 to 100 s and uses roughly 30 OpenSEO credits (20 local SERP calls plus tracker reads).
+- It returns sitemap, robots.txt, llms.txt and homepage schema checks; the latest OpenSEO site audit (`onpage`); Google organic positions from the OpenSEO rank tracker and Maps positions from OpenSEO local SERP, for 10 keywords; AI answer visibility (`openseo.aiVisibility`, from the latest completed run of the project's tracker), a `competitors` list; and mobile PageSpeed. A call takes 80 to 100 s and uses roughly 30 OpenSEO credits (20 local SERP calls plus tracker reads).
 - n8n credentials: "SEO data token" (Header Auth), "OpenSEO" (Header Auth, Name `x-api-key`, Value = a personal OpenSEO API key; `Authorization: Bearer` was rejected with 401 on the hosted endpoint) and "PageSpeed Insights API" (Query Auth, Name = `key`, an `AIza…` key from the Google Cloud project `livo-ai-511908`). The DataForSEO credential was deleted.
-- Add a site by adding an entry to `SITES` in the Config node: base URL, location, brand names, 5 local keywords.
+- Add a site by adding an entry to `SITES` in the Config node: base URL, location, brand names, keywords, `near`, `openseoProjectId`, `competitors` (optional `localKeywords`). The repo JSON has no `id`: add `"id":"faKFccg43wThoWDE","active":true` to the copy before `n8n import:workflow`, or n8n creates a duplicate workflow.
 
-### What the data says about dhobico.com (17 Oct)
+### What the data said about dhobico.com (17 Oct, historical)
 - **Google organic:** not in the top 30 for any of the 5 keywords. JustDial, Tumbledry, Laundroway and IndiaMART hold those spots.
 - **Google Maps:** #5 for "steam ironing service hyderabad", #6 for "doorstep ironing service hyderabad", #18 for "ironing service in hyderabad". Not found for "ironing service near me" or "laundry pickup and delivery hyderabad". (An earlier version of this file said #20; the data file says #18.)
 - **Homepage schema:** WebSite, Organization, WebPage and BreadcrumbList are present. No LocalBusiness, and no FAQPage even though the page has a 10-question FAQ.
