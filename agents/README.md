@@ -22,7 +22,7 @@ Each site gets a workspace on the server at `/home/agent/work/<site>/`. Render i
 | Developer | `openrouter/anthropic/claude-haiku-5.5` | $0.50 | Creates WordPress drafts through the REST API; never publishes or deletes |
 | Company hard stop | | $1.50 | |
 
-All agents: heartbeat off, 1 concurrent run, no permission to create other agents. Companies: "Dhobi & Co." (DHO) and "Ladva Law Firm" (LAD).
+All agents: heartbeat off, 1 concurrent run, no permission to create other agents. Companies: "Dhobi & Co." (DHO), "ACRE Realty" (ACR) and "ACG United" (ACG). "Ladva Law Firm" (LAD) was paused on 22 Oct 2026 and is being removed.
 
 Why these models: Gemini 3.8 flash failed twice with "corrupted thought signature" on 19 Oct and costs about 8 times more per token than Haiku 5.5 ($0.825 / $4.125 against $0.10 / $0.50 per million). The free `google/gemma-4-26b-a4b-it:free` made a good tool call in a direct test, but as a Writer it stalled for over five minutes. `gemini-3.8-flash-lite` does not exist; 3.5 flash-lite is the cheap Google option.
 

@@ -23,7 +23,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Runs every Monday 07:00 Asia/Kolkata but only does work on the first Monday of the month.\n// The SEO data webhook then starts the site audit, refreshes backlinks and saves a snapshot.\nconst ist = new Date(Date.now() + 5.5 * 3600 * 1000);\nif (ist.getUTCDate() > 7) return [];\nreturn ['dhobico.com', 'ladvalaw.com'].map(site => ({ json: { site } }));"
+        "jsCode": "// Runs every Monday 07:00 Asia/Kolkata but only does work on the first Monday of the month.\n// The SEO data webhook then starts the site audit, refreshes backlinks and saves a snapshot.\nconst ist = new Date(Date.now() + 5.5 * 3600 * 1000);\nif (ist.getUTCDate() > 7) return [];\nreturn ['dhobico.com'].map(site => ({ json: { site } }));"
       },
       "id": "mp2",
       "name": "First Monday only",

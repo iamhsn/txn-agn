@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Create or refresh an agent workspace for one site. Run as root on the server:
 #   /opt/txn-agn/scripts/site-workspace.sh <site> "<brand>" "<market>" [<wordpress base url>]
-# Example: site-workspace.sh ladvalaw.com "Ladva Law" "people in San Francisco" https://www.ladvalaw.com
+# Example: site-workspace.sh dhobico.com "Dhobi & Co" "people in Hyderabad"
 # Creates <dir>/AGENTS.md (SEO Lead), writer/AGENTS.md, developer/AGENTS.md, bin/check-copy.sh and drafts/.
 set -euo pipefail
 site="$1"; brand="$2"; market="$3"; base="${4:-https://$site}"
